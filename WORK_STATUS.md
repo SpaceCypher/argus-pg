@@ -4,6 +4,7 @@
 - [x] 0.1. Environment Init (Phase 0)
 - [x] 1.1. Project Setup
 - [x] 1.2. Query & Plan Models
+- [x] 1.3. Index & Migration Models
 
 ## 🚧 In Progress
 *(No tasks in progress)*
@@ -11,8 +12,7 @@
 ## ⏳ Pending
 
 **Phase 1: Domain Layer (Foundation & Vocabulary)**
-- [ ] 1.3. Index & Migration Models
-- [ ] 1.3. Index & Migration Models
+- [ ] 1.4. Sandbox Models
 - [ ] 1.4. Sandbox Models
 - [ ] 1.5. Error Hierarchy
 
