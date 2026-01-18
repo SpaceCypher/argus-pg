@@ -7,6 +7,7 @@
 - [x] 1.3. Index & Migration Models
 - [x] 1.4. Sandbox Models
 - [x] 1.5. Error Hierarchy
+- [x] 2.1. Abstract Sandbox Interface
 
 ## 🚧 In Progress
 *(No tasks in progress)*
@@ -14,7 +15,6 @@
 ## ⏳ Pending
 
 **Phase 2: Core Layer - Sandbox Engine (The Truth)**
-- [ ] 2.1. Abstract Sandbox Interface
 - [ ] 2.2. Docker Client Adapter
 - [ ] 2.3. Sandbox Lifecycle
 - [ ] 2.4. Seeding Mechanism
