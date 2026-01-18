@@ -10,6 +10,7 @@
 - [x] 2.1. Abstract Sandbox Interface
 - [x] 2.2. Docker Client Adapter
 - [x] 2.3. Sandbox Lifecycle
+- [x] 2.4. Seeding Mechanism
 
 ## 🚧 In Progress
 *(No tasks in progress)*
@@ -17,7 +18,7 @@
 ## ⏳ Pending
 
 **Phase 2: Core Layer - Sandbox Engine (The Truth)**
-- [ ] 2.4. Seeding Mechanism
+- [ ] 2.5. Validation Logic
 
 - [ ] 2.5. Validation Logic
 

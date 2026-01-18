@@ -33,6 +33,13 @@ class Sandbox(ABC):
         pass
 
     @abstractmethod
+    async def seed(self, sql: str) -> None:
+        """
+        Populate the sandbox with schema and data.
+        """
+        pass
+
+    @abstractmethod
     async def run_query(self, query: SqlStatement) -> PgStatStats:
         """
         Execute a query and return structured performance metrics.

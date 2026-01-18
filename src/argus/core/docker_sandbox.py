@@ -130,6 +130,26 @@ class DockerSandbox(Sandbox):
         # Task 2.3+
         raise NotImplementedError("Task 2.3")
 
+    async def seed(self, sql: str) -> None:
+        """
+        Execute raw SQL against the running container to seed schema/data.
+        """
+        if not self._container:
+            raise DependencyError("Container not initialized")
+
+        # We assume _wait_for_ready has passed, so ports are available.
+        host_port = self._container.ports["5432/tcp"][0]["HostPort"]
+        dsn = f"postgresql://argus:argus@localhost:{host_port}/argus_sandbox"
+
+        # Keeping local to avoid module-level strict dependency
+        import psycopg
+
+        try:
+            with psycopg.connect(dsn, autocommit=True) as conn, conn.cursor() as cur:
+                cur.execute(sql)
+        except Exception as e:
+            raise DependencyError(f"Seeding failed: {e}") from e
+
     async def run_query(self, query: SqlStatement) -> PgStatStats:
         # Task 2.5
         raise NotImplementedError("Task 2.5")
