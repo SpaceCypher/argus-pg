@@ -6,14 +6,12 @@
 - [x] 1.2. Query & Plan Models
 - [x] 1.3. Index & Migration Models
 - [x] 1.4. Sandbox Models
+- [x] 1.5. Error Hierarchy
 
 ## 🚧 In Progress
 *(No tasks in progress)*
 
 ## ⏳ Pending
-
-**Phase 1: Domain Layer (Foundation & Vocabulary)**
-- [ ] 1.5. Error Hierarchy
 
 **Phase 2: Core Layer - Sandbox Engine (The Truth)**
 - [ ] 2.1. Abstract Sandbox Interface
