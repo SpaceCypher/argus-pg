@@ -10,6 +10,7 @@ class PlanNode(BaseModel):
     relation_name: str | None = Field(None, alias="Relation Name")
     schema_name: str | None = Field(None, alias="Schema")
     alias: str | None = Field(None, alias="Alias")
+    index_name: str | None = Field(None, alias="Index Name")
 
     startup_cost: float = Field(..., alias="Startup Cost")
     total_cost: float = Field(..., alias="Total Cost")
