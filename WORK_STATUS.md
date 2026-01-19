@@ -13,6 +13,7 @@
 - [x] 2.4. Seeding Mechanism
 - [x] 2.5. Validation Logic (Sandbox Execution)
 - [x] 3.1. DB Connection Adapter (Read-Only)
+- [x] 3.2. Observer Component
 
 ## 🚧 In Progress
 *(No tasks in progress)*
@@ -20,7 +21,6 @@
 ## ⏳ Pending
 
 **Phase 3: Core Layer - Observation & Analysis (The Input)**
-- [ ] 3.2. Observer Component
 - [ ] 3.3. Analyzer Component
 - [ ] 3.4. Query Fingerprinting
 
