@@ -15,14 +15,12 @@
 - [x] 3.1. DB Connection Adapter (Read-Only)
 - [x] 3.2. Observer Component
 - [x] 3.3. Analyzer Component (Explain Plan)
+- [x] 3.4. Query Fingerprinting
 
 ## 🚧 In Progress
 *(No tasks in progress)*
 
 ## ⏳ Pending
-
-**Phase 3: Core Layer - Observation & Analysis (The Input)**
-- [ ] 3.4. Query Fingerprinting
 
 **Phase 4: Core Layer - Brain & Decision (The Architecture)**
 - [ ] 4.1. Abstract Brain Interface
