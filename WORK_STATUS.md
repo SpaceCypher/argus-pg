@@ -19,14 +19,12 @@
 - [x] 4.1. Abstract Brain Interface
 - [x] 4.2. Heuristic Brain (No-LLM)
 - [x] 4.3. Gemini Adapter
+- [x] 4.4. Decision Engine
 
 ## 🚧 In Progress
 *(No tasks in progress)*
 
 ## ⏳ Pending
-
-**Phase 4: Core Layer - Brain & Decision (The Architecture)**
-- [ ] 4.4. Decision Engine
 
 **Phase 5: Interfaces Layer (The Interaction)**
 - [ ] 5.1. Configuration Loader
