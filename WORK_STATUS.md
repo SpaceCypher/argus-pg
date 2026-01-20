@@ -20,6 +20,7 @@
 - [x] 4.2. Heuristic Brain (No-LLM)
 - [x] 4.3. Gemini Adapter
 - [x] 4.4. Decision Engine
+- [x] 5.1. Configuration Loader
 
 ## 🚧 In Progress
 *(No tasks in progress)*
@@ -27,7 +28,6 @@
 ## ⏳ Pending
 
 **Phase 5: Interfaces Layer (The Interaction)**
-- [ ] 5.1. Configuration Loader
 - [ ] 5.2. CLI Skeleton
 - [ ] 5.3. Audit Command
 - [ ] 5.4. Check Command
