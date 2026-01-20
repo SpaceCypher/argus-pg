@@ -22,6 +22,7 @@
 - [x] 4.4. Decision Engine
 - [x] 5.1. Configuration Loader
 - [x] 5.2. CLI Skeleton
+- [x] 5.3. Audit Command
 
 ## 🚧 In Progress
 *(No tasks in progress)*
@@ -29,7 +30,6 @@
 ## ⏳ Pending
 
 **Phase 5: Interfaces Layer (The Interaction)**
-- [ ] 5.3. Audit Command
 - [ ] 5.4. Check Command
 - [ ] 5.5. Watch Command
 
