@@ -17,6 +17,7 @@
 - [x] 3.3. Analyzer Component (Explain Plan)
 - [x] 3.4. Query Fingerprinting
 - [x] 4.1. Abstract Brain Interface
+- [x] 4.2. Heuristic Brain (No-LLM)
 
 ## 🚧 In Progress
 *(No tasks in progress)*
@@ -24,7 +25,6 @@
 ## ⏳ Pending
 
 **Phase 4: Core Layer - Brain & Decision (The Architecture)**
-- [ ] 4.2. Heuristic Brain (No-LLM)
 - [ ] 4.3. Gemini Adapter
 - [ ] 4.4. Decision Engine
 

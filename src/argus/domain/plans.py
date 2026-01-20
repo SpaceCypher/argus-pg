@@ -11,6 +11,7 @@ class PlanNode(BaseModel):
     schema_name: str | None = Field(None, alias="Schema")
     alias: str | None = Field(None, alias="Alias")
     index_name: str | None = Field(None, alias="Index Name")
+    filter_condition: str | None = Field(None, alias="Filter")
 
     startup_cost: float = Field(..., alias="Startup Cost")
     total_cost: float = Field(..., alias="Total Cost")
