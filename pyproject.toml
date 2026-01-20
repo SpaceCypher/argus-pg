@@ -13,6 +13,7 @@ dependencies = [
     "psycopg[binary] (>=3.3.2,<4.0.0)",
     "google-generativeai (>=0.8.6,<0.9.0)"
 ]
+packages = [{include = "argus", from = "src"}]
 
 
 [build-system]
@@ -42,3 +43,6 @@ dev = [
     "black (>=26.1.0,<27.0.0)",
     "mypy (>=1.19.1,<2.0.0)"
 ]
+
+[tool.poetry.scripts]
+argus = "argus.cli:main"

@@ -21,6 +21,7 @@
 - [x] 4.3. Gemini Adapter
 - [x] 4.4. Decision Engine
 - [x] 5.1. Configuration Loader
+- [x] 5.2. CLI Skeleton
 
 ## 🚧 In Progress
 *(No tasks in progress)*
@@ -28,7 +29,6 @@
 ## ⏳ Pending
 
 **Phase 5: Interfaces Layer (The Interaction)**
-- [ ] 5.2. CLI Skeleton
 - [ ] 5.3. Audit Command
 - [ ] 5.4. Check Command
 - [ ] 5.5. Watch Command
