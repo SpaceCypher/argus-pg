@@ -2,12 +2,19 @@ import argparse
 import asyncio
 import logging
 import sys
+from pathlib import Path
 
-from argus.config import ConfigurationError, load_config
+from argus.config import ArgusConfig, ConfigurationError, load_config
 from argus.core.analyzer import Analyzer
+from argus.core.brain import Brain
 from argus.core.database import PsycopgReadAdapter
+from argus.core.decision_engine import DecisionEngine
+from argus.core.docker_sandbox import DockerSandbox
+from argus.core.gemini_brain import GeminiBrain
+from argus.core.heuristic_brain import HeuristicBrain
 from argus.core.observer import Observer
 from argus.domain.plans import ExplainPlan
+from argus.domain.query import SqlStatement
 
 # Configure basic logging
 logging.basicConfig(
@@ -15,6 +22,13 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def get_brain(config: ArgusConfig) -> Brain:
+    if config.brain.provider == "gemini":
+        key = config.brain.gemini.api_key
+        return GeminiBrain(api_key=key, model_name=config.brain.gemini.model)
+    return HeuristicBrain()
 
 
 async def run_audit(args: argparse.Namespace) -> None:
@@ -86,6 +100,92 @@ async def run_audit(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+async def run_check(args: argparse.Namespace) -> None:
+    try:
+        config = load_config(args.config)
+        logger.debug("Loaded configuration for check")
+    except ConfigurationError as e:
+        logger.error(f"Configuration validation failed: {e}")
+        sys.exit(1)
+
+    query_path = Path(args.query_file)
+    if not query_path.exists():
+        logger.error(f"Query file not found: {query_path}")
+        sys.exit(1)
+
+    raw_sql = query_path.read_text().strip()
+    if not raw_sql:
+        logger.error("Query file is empty")
+        sys.exit(1)
+
+    print(f"🔍 Checking query from {args.query_file}...")
+    print(f"Brain: {config.brain.provider}")
+
+    try:
+        # 1. Analyze
+        # We need to run EXPLAIN against the DB to get the plan for the Brain.
+        # Check command implies we have access to the DB.
+        async with PsycopgReadAdapter(config.database.dsn) as db:
+            explain_sql = f"EXPLAIN (FORMAT JSON, COSTS TRUE) {raw_sql}"
+            result = await db.fetch_one(explain_sql)
+            if not result:
+                logger.error("Could not explain query.")
+                return
+            plan_data = result[0] if isinstance(result, list) else result[0]
+            plan = ExplainPlan(plan=plan_data[0]["Plan"])
+
+        # 2. Brain
+        brain = get_brain(config)
+        # Mocking SqlStatement since we don't have stats for this specific single query necessarily
+        # or we accept it doesn't matter for the Brain, just needs text.
+        # But `propose_indexes` takes `SqlStatement` which has stats.
+        # We'll construct a dummy SqlStatement wrapping the raw query.
+        # The Brain only uses `raw_query` anyway.
+        query_obj = SqlStatement(
+            query_id="check_manual",
+            raw_query=raw_sql,
+            calls=1,
+            total_exec_time=0.0,
+            rows=0,
+            plans=[],
+        )
+        suggestions = await brain.propose_indexes(query_obj, plan)
+
+        if not suggestions:
+            print("No indexes suggested by the Brain.")
+            return
+
+        print(f"🧠 Brain proposed {len(suggestions)} indexes. Validating in Sandbox...")
+
+        # 3. Decision Engine (Validation)
+        # Defines how to create a sandbox
+        def sandbox_factory() -> DockerSandbox:
+            return DockerSandbox(
+                image=config.sandbox.image,
+                cleanup=config.sandbox.cleanup,
+            )
+
+        engine = DecisionEngine(sandbox_factory)
+        verified = await engine.validate(query_obj, suggestions)
+
+        # 4. Report
+        print("\n=== Validation Report ===")
+        for res in verified:
+            status = "✅ PASS" if res.validation.improved else "❌ FAIL"
+            factor = res.validation.improvement_factor
+            print(
+                f"\n{status} | Improvement: {factor:.2f}x (Cost: {res.validation.original_cost} -> {res.validation.new_cost})"
+            )
+            print(f"Index: {res.definition.inferred_name}")
+            print(f"DDL:\n{res.migration_sql}")
+            if res.validation.error:
+                print(f"Error: {res.validation.error}")
+
+    except Exception as e:
+        logger.error(f"Check failed: {e}")
+        sys.exit(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Argus-PG: PostgreSQL Index Advisor & Validator"
@@ -134,8 +234,7 @@ def main() -> None:
         asyncio.run(run_audit(args))
 
     elif args.command == "check":
-        print(f"Check command invoked. Query File: {args.query_file}")
-        print("Note: This is a skeleton. functionality coming in Task 5.4")
+        asyncio.run(run_check(args))
 
     elif args.command == "watch":
         print("Watch command invoked.")

@@ -25,12 +25,11 @@
 - [x] 5.3. Audit Command
 
 ## 🚧 In Progress
-*(No tasks in progress)*
+- [ ] 5.4. Check Command
 
 ## ⏳ Pending
 
 **Phase 5: Interfaces Layer (The Interaction)**
-- [ ] 5.4. Check Command
 - [ ] 5.5. Watch Command
 
 **Phase 6: Testing & Validation**
