@@ -19,7 +19,10 @@ class DockerSandbox(Sandbox):
 
     def __init__(self, config: SandboxConfig) -> None:
         self.config = config
-        self._client: docker.DockerClient = docker.from_env()
+        try:
+            self._client: docker.DockerClient = docker.from_env()
+        except DockerException as e:
+            raise DependencyError(f"Docker infrastructure failed: {e}") from e
         self._container: Container | None = None
 
     async def __aenter__(self) -> Self:

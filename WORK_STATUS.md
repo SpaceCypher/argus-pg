@@ -27,9 +27,10 @@
 - [x] 5.5. Watch Command
 - [x] 6.1. Unit Test Suite
 - [x] 6.2. Integration Test Suite
+- [x] 6.3. Failure Mode verification
 
 ## 🚧 In Progress
-- [ ] 6.3. Failure Mode verification
+*(No tasks in progress)*
 
 ## ⏳ Pending
-- [ ] 6.3. Failure Mode verification
+*(No tasks pending)*

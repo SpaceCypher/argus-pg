@@ -8,17 +8,21 @@ from argus.config import ConfigurationError, load_config
 
 def test_load_config_defaults():
     """Test loading configuration with defaults (no file, no env)."""
-    with patch("pathlib.Path.exists", return_value=False):
+    with (
+        patch("pathlib.Path.exists", return_value=False),
+        pytest.raises(ConfigurationError),
+    ):
         # Should raise ConfigurationError because database section is missing
-        with pytest.raises(ConfigurationError):
-            load_config()
+        load_config()
 
 
 def test_load_config_missing_required():
     """Test that missing required fields raises ConfigurationError."""
-    with patch("pathlib.Path.exists", return_value=False):
-        with pytest.raises(ConfigurationError):
-            load_config()
+    with (
+        patch("pathlib.Path.exists", return_value=False),
+        pytest.raises(ConfigurationError),
+    ):
+        load_config()
 
 
 def test_load_config_from_env():
