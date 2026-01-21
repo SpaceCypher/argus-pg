@@ -23,12 +23,13 @@
 - [x] 5.1. Configuration Loader
 - [x] 5.2. CLI Skeleton
 - [x] 5.3. Audit Command
+- [x] 5.4. Check Command
+- [x] 5.5. Watch Command
+- [x] 6.1. Unit Test Suite
+- [x] 6.2. Integration Test Suite
 
 ## 🚧 In Progress
-- [ ] 6.1. Unit Test Suite
+- [ ] 6.3. Failure Mode verification
 
 ## ⏳ Pending
-
-**Phase 6: Testing & Validation**
-- [ ] 6.2. Integration Test Suite
 - [ ] 6.3. Failure Mode verification

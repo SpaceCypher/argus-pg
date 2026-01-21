@@ -107,6 +107,8 @@ class DockerSandbox(Sandbox):
                     conn.cursor() as cur,
                 ):
                     cur.execute("SELECT 1")
+                    # Ensure extension is created
+                    cur.execute("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
                 return  # Success
             except psycopg.OperationalError:
                 # DB not ready yet
