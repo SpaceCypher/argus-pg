@@ -9,6 +9,20 @@ Database performance should not be a guessing game. Argus-PG treats index creati
 2.  **Verify**: Measure query cost and execution time with vs. without the index.
 3.  **Decide**: Accept or reject indexes based on concrete regression metrics.
 
+## 🛡 Safety & Security
+
+Argus-PG is designed with a "Safety First" philosophy. It is an **Automated DBA**, not a chaotic monkey.
+
+### ✅ What Argus-PG DOES
+-   **Read-Only Observation**: The `Observer` component only runs `EXPLAIN` and reads from `pg_stat_statements`. It NEVER modifies production data.
+-   **Sandboxed Experiments**: All `CREATE INDEX` operations happen in an isolated, ephemeral Docker container that is destroyed immediately after validation.
+-   **Deterministic Decisions**: Indexes are only recommended if they meet strict quantitative thresholds (e.g., >2x speedup).
+
+### ❌ What Argus-PG Does NOT Do
+-   **No Auto-Tuning magic**: It does not wildly change configurations or restart your database.
+-   **No AI Hallucinations**: LLM suggestions are treated as *untrusted hypotheses*. If the sandbox validation fails, the suggestion is discarded, no matter how confident the AI was.
+-   **No Production Write Access**: Ideally, the configured database user should not even have `CREATE` privileges on production tables.
+
 ## 🏗 Architecture
 
 Argus-PG follows a **Hexagonal Architecture** (Ports & Adapters) to ensure separation regarding infrastructure (Docker, Postgres) and core logic.
