@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PlanNode(BaseModel):
@@ -27,8 +27,7 @@ class PlanNode(BaseModel):
     # Recursive children
     plans: list["PlanNode"] = Field(default_factory=list, alias="Plans")
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class ExplainPlan(BaseModel):
@@ -40,5 +39,4 @@ class ExplainPlan(BaseModel):
     planning_time: float | None = Field(None, alias="Planning Time")
     execution_time: float | None = Field(None, alias="Execution Time")
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)

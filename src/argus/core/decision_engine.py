@@ -32,7 +32,7 @@ class DecisionEngine:
         # Assuming we can revert cleanly with drop index.
 
         try:
-            async with await self.sandbox_factory() as sb:
+            async with self.sandbox_factory() as sb:
                 # 1. Setup Data (Seed) - In a real scenario, we might need data.
                 # 1. Setup Data - Assuming pre-seeded environment.
                 # If tables missing, queries fail (baseline check catches this).
@@ -62,10 +62,14 @@ class DecisionEngine:
                         new_cost = new_stats.total_exec_time
 
                         # 5. Calculate Improvement
-                        # Improvement factor: new / old. < 1.0 is better.
-                        # Logic: if baseline=100ms, new=50ms, factor=0.5
-                        factor = new_cost / baseline_cost if baseline_cost > 0 else 1.0
-                        improved = factor < 1.0
+                        # Improvement factor: old / new. > 1.0 is better (speedup).
+                        # Logic: if baseline=100ms, new=50ms, factor=2.0x
+                        if new_cost > 0:
+                            factor = baseline_cost / new_cost
+                        else:
+                            factor = 999.0  # Instant execution
+
+                        improved = factor > 1.0
 
                         results.append(
                             VerifiedIndexSuggestion(

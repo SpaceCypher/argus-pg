@@ -25,11 +25,10 @@
 - [x] 5.3. Audit Command
 
 ## 🚧 In Progress
-- [ ] 5.5. Watch Command
+- [ ] 6.1. Unit Test Suite
 
 ## ⏳ Pending
 
 **Phase 6: Testing & Validation**
-- [ ] 6.1. Unit Test Suite
 - [ ] 6.2. Integration Test Suite
 - [ ] 6.3. Failure Mode verification

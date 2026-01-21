@@ -66,3 +66,23 @@ class IndexSuggestion(BaseModel):
         ..., description="Why this index is suggested (LLM or heuristic)"
     )
     migration: MigrationPlan | None = None  # Computed later
+
+
+class ValidationResult(BaseModel):
+    """
+    Outcome of validating an index suggestion in the sandbox.
+    """
+
+    improved: bool = Field(..., description="Did the index improve performance?")
+    original_cost: float = Field(..., description="Baseline cost/time")
+    new_cost: float = Field(..., description="Cost/time with index")
+    improvement_factor: float = Field(..., description="original / new. >1.0 is good.")
+    error: str | None = Field(None, description="Error message if validation failed")
+
+
+class VerifiedIndexSuggestion(IndexSuggestion):
+    """
+    An index suggestion that has been validated (passed or failed).
+    """
+
+    validation: ValidationResult
