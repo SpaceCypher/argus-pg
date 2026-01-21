@@ -25,12 +25,9 @@
 - [x] 5.3. Audit Command
 
 ## 🚧 In Progress
-- [ ] 5.4. Check Command
+- [ ] 5.5. Watch Command
 
 ## ⏳ Pending
-
-**Phase 5: Interfaces Layer (The Interaction)**
-- [ ] 5.5. Watch Command
 
 **Phase 6: Testing & Validation**
 - [ ] 6.1. Unit Test Suite

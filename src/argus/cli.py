@@ -217,7 +217,15 @@ def main() -> None:
     )
 
     # Command: Watch
-    subparsers.add_parser("watch", help="Real-time monitoring of queries")
+    parser_watch = subparsers.add_parser(
+        "watch", help="Real-time monitoring of queries"
+    )
+    parser_watch.add_argument(
+        "--interval",
+        type=int,
+        default=60,
+        help="Polling interval in seconds (default: 60)",
+    )
 
     args = parser.parse_args()
 
@@ -237,8 +245,108 @@ def main() -> None:
         asyncio.run(run_check(args))
 
     elif args.command == "watch":
-        print("Watch command invoked.")
-        print("Note: This is a skeleton. functionality coming in Task 5.5")
+        asyncio.run(run_watch(args))
+
+
+async def run_watch(args: argparse.Namespace) -> None:
+    try:
+        config = load_config(args.config)
+        logger.debug("Loaded configuration for watch")
+    except ConfigurationError as e:
+        logger.error(f"Configuration validation failed: {e}")
+        sys.exit(1)
+
+    print(f"👀 Watching DB: {config.database.dsn}")
+    print(f"Poll Interval: {args.interval}s")
+    print("Press Ctrl+C to stop.")
+
+    seen_queries: set[str] = set()
+    brain = get_brain(config)
+
+    # Sandbox Factory
+    def sandbox_factory() -> DockerSandbox:
+        return DockerSandbox(
+            image=config.sandbox.image,
+            cleanup=config.sandbox.cleanup,
+        )
+
+    engine = DecisionEngine(sandbox_factory)
+
+    try:
+        async with PsycopgReadAdapter(config.database.dsn) as db:
+            observer = Observer(db)
+            while True:
+                try:
+                    # 1. Fetch Queries
+                    queries = await observer.fetch_top_queries(limit=10)
+                    new_queries = [
+                        q
+                        for q in queries
+                        if q.query_id and q.query_id not in seen_queries
+                    ]
+
+                    if not new_queries:
+                        logger.debug("No new queries found.")
+
+                    for query in new_queries:
+                        if not query.query_id:
+                            continue
+
+                        print(f"\n🔎 Analyzing new query: {query.query_id[:8]}...")
+                        seen_queries.add(query.query_id)
+
+                        # 2. Explain
+                        explain_sql = (
+                            f"EXPLAIN (FORMAT JSON, COSTS TRUE) {query.raw_query}"
+                        )
+                        result = await db.fetch_one(explain_sql)
+                        if not result:
+                            logger.warn(f"Empty explain for {query.query_id}")
+                            continue
+                        plan_data = result[0] if isinstance(result, list) else result[0]
+                        plan = ExplainPlan(plan=plan_data[0]["Plan"])
+
+                        # 3. Brain
+                        suggestions = await brain.propose_indexes(query, plan)
+                        if not suggestions:
+                            print("  Examples suggestions: None")
+                            continue
+
+                        print(
+                            f"  🧠 Found {len(suggestions)} suggestions. Validating..."
+                        )
+
+                        # 4. Validate
+                        verified = await engine.validate(query, suggestions)
+
+                        # 5. Report
+                        for res in verified:
+                            if res.validation.improved:
+                                print(
+                                    f"  ✅ PASS | {res.definition.inferred_name} | "
+                                    f"{res.validation.improvement_factor:.2f}x speedup"
+                                )
+                                print(f"  DDL: {res.migration_sql}")
+                            else:
+                                print(
+                                    f"  ❌ FAIL | {res.definition.inferred_name} | "
+                                    f"No improvement or error"
+                                )
+
+                    # Wait for next tick
+                    await asyncio.sleep(args.interval)
+
+                except Exception as e:
+                    logger.error(f"Error in watch loop: {e}")
+                    await asyncio.sleep(args.interval)
+
+    except asyncio.CancelledError:
+        print("\nStopping watch...")
+    except KeyboardInterrupt:
+        print("\nStopping watch...")
+    except Exception as e:
+        logger.error(f"Watch failed: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
