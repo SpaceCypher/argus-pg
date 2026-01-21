@@ -30,7 +30,7 @@
 - [x] 6.3. Failure Mode verification
 
 ## 🚧 In Progress
-*(No tasks in progress)*
+- [ ] 6.4. End-to-End Validation
 
 ## ⏳ Pending
 *(No tasks pending)*

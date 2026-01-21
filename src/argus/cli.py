@@ -58,10 +58,10 @@ async def run_audit(args: argparse.Namespace) -> None:
             print(headers)
             print("-" * 75)
 
-            for query in queries:
+            for query_obj, stats in queries:
                 try:
                     # Run EXPLAIN (FORMAT JSON)
-                    explain_sql = f"EXPLAIN (FORMAT JSON, COSTS TRUE) {query.raw_query}"
+                    explain_sql = f"EXPLAIN (FORMAT JSON, COSTS TRUE, GENERIC_PLAN TRUE) {query_obj.raw_query}"
 
                     result = await db.fetch_one(explain_sql)
                     if not result:
@@ -84,16 +84,16 @@ async def run_audit(args: argparse.Namespace) -> None:
                     cost = analyzer.get_total_cost()
 
                     # Print formatted row
-                    fingerprint = query.query_id[:16] if query.query_id else "N/A"
-                    mean_time = f"{query.mean_exec_time:.2f}"
+                    fingerprint = query_obj.query_id[:16] if query_obj.query_id else "N/A"
+                    mean_time = f"{stats.mean_exec_time:.2f}"
                     row = (
-                        f"{fingerprint:<16} | {query.calls:<8} | {mean_time:<10} | "
+                        f"{fingerprint:<16} | {stats.calls:<8} | {mean_time:<10} | "
                         f"{top_node:<15} | {cost:<10.2f}"
                     )
                     print(row)
 
                 except Exception as e:
-                    logger.warning(f"Failed to analyze query {query.query_id}: {e}")
+                    logger.warning(f"Failed to analyze query {query_obj.query_id}: {e}")
 
     except Exception as e:
         logger.error(f"Audit failed: {e}")
@@ -126,7 +126,7 @@ async def run_check(args: argparse.Namespace) -> None:
         # We need to run EXPLAIN against the DB to get the plan for the Brain.
         # Check command implies we have access to the DB.
         async with PsycopgReadAdapter(config.database.dsn) as db:
-            explain_sql = f"EXPLAIN (FORMAT JSON, COSTS TRUE) {raw_sql}"
+            explain_sql = f"EXPLAIN (FORMAT JSON, COSTS TRUE, GENERIC_PLAN TRUE) {raw_sql}"
             result = await db.fetch_one(explain_sql)
             if not result:
                 logger.error("Could not explain query.")
@@ -159,11 +159,10 @@ async def run_check(args: argparse.Namespace) -> None:
 
         # 3. Decision Engine (Validation)
         # Defines how to create a sandbox
+        # 3. Decision Engine (Validation)
+        # Defines how to create a sandbox
         def sandbox_factory() -> DockerSandbox:
-            return DockerSandbox(
-                image=config.sandbox.image,
-                cleanup=config.sandbox.cleanup,
-            )
+            return DockerSandbox(config.sandbox)
 
         engine = DecisionEngine(sandbox_factory)
         verified = await engine.validate(query_obj, suggestions)
@@ -177,7 +176,10 @@ async def run_check(args: argparse.Namespace) -> None:
                 f"\n{status} | Improvement: {factor:.2f}x (Cost: {res.validation.original_cost} -> {res.validation.new_cost})"
             )
             print(f"Index: {res.definition.inferred_name}")
-            print(f"DDL:\n{res.migration_sql}")
+            if res.migration:
+                print(f"DDL:\n{res.migration.up_sql}")
+            else:
+                print("DDL: (Available in IndexDefinition, migration plan not generated)")
             if res.validation.error:
                 print(f"Error: {res.validation.error}")
 
@@ -278,26 +280,26 @@ async def run_watch(args: argparse.Namespace) -> None:
             while True:
                 try:
                     # 1. Fetch Queries
-                    queries = await observer.fetch_top_queries(limit=10)
+                    queries_with_stats = await observer.fetch_top_queries(limit=10)
                     new_queries = [
-                        q
-                        for q in queries
+                        (q, s)
+                        for q, s in queries_with_stats
                         if q.query_id and q.query_id not in seen_queries
                     ]
 
                     if not new_queries:
                         logger.debug("No new queries found.")
 
-                    for query in new_queries:
-                        if not query.query_id:
+                    for query_obj, stats in new_queries:
+                        if not query_obj.query_id:
                             continue
 
-                        print(f"\n🔎 Analyzing new query: {query.query_id[:8]}...")
-                        seen_queries.add(query.query_id)
+                        print(f"\n🔎 Analyzing new query: {query_obj.query_id[:8]}...")
+                        seen_queries.add(query_obj.query_id)
 
                         # 2. Explain
                         explain_sql = (
-                            f"EXPLAIN (FORMAT JSON, COSTS TRUE) {query.raw_query}"
+                            f"EXPLAIN (FORMAT JSON, COSTS TRUE, GENERIC_PLAN TRUE) {query_obj.raw_query}"
                         )
                         result = await db.fetch_one(explain_sql)
                         if not result:
@@ -307,7 +309,7 @@ async def run_watch(args: argparse.Namespace) -> None:
                         plan = ExplainPlan(plan=plan_data[0]["Plan"])
 
                         # 3. Brain
-                        suggestions = await brain.propose_indexes(query, plan)
+                        suggestions = await brain.propose_indexes(query_obj, plan)
                         if not suggestions:
                             print("  Examples suggestions: None")
                             continue
@@ -317,7 +319,7 @@ async def run_watch(args: argparse.Namespace) -> None:
                         )
 
                         # 4. Validate
-                        verified = await engine.validate(query, suggestions)
+                        verified = await engine.validate(query_obj, suggestions)
 
                         # 5. Report
                         for res in verified:

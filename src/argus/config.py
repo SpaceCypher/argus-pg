@@ -97,12 +97,16 @@ def load_config(path: str | Path | None = None) -> ArgusConfig:
         config_data["brain"]["provider"] = env_brain_provider
 
     # Gemini
+    if "brain" not in config_data:
+        config_data["brain"] = {}
+    if "gemini" not in config_data["brain"]:
+        config_data["brain"]["gemini"] = {}
+
     if env_gemini_key := os.environ.get("ARGUS_BRAIN_GEMINI_API_KEY"):
-        if "brain" not in config_data:
-            config_data["brain"] = {}
-        if "gemini" not in config_data["brain"]:
-            config_data["brain"]["gemini"] = {}
         config_data["brain"]["gemini"]["api_key"] = env_gemini_key
+
+    if env_gemini_model := os.environ.get("ARGUS_BRAIN_GEMINI_MODEL"):
+        config_data["brain"]["gemini"]["model"] = env_gemini_model
 
     # 4. Validate and Build
     try:

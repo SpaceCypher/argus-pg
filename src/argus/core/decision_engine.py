@@ -40,6 +40,7 @@ class DecisionEngine:
 
                 # 2. Baseline
                 try:
+                    await sb.reset_metrics()
                     baseline_stats = await sb.run_query(query)
                     baseline_cost = (
                         baseline_stats.total_exec_time
@@ -53,11 +54,13 @@ class DecisionEngine:
                     ]
 
                 for suggestion in suggestions:
+                    name = suggestion.definition.inferred_name
                     try:
                         # 3. Apply Index
                         await sb.apply_index(suggestion.definition)
 
                         # 4. Measure
+                        await sb.reset_metrics()
                         new_stats = await sb.run_query(query)
                         new_cost = new_stats.total_exec_time
 
@@ -86,7 +89,6 @@ class DecisionEngine:
                         # 6. Revert (Drop Index)
                         # Cleanup: Drop index to restore state.
                         schema = suggestion.definition.schema_name
-                        name = suggestion.definition.inferred_name
                         drop_sql = f'DROP INDEX IF EXISTS "{schema}"."{name}";'
                         await sb.seed(drop_sql)
 

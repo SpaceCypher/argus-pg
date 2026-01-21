@@ -1,0 +1,6 @@
+FROM postgres:16-alpine
+ENV POSTGRES_USER=argus
+ENV POSTGRES_PASSWORD=argus
+ENV POSTGRES_DB=argus_sandbox
+COPY start_seed.sql /docker-entrypoint-initdb.d/seed.sql
+CMD ["postgres", "-c", "shared_preload_libraries=pg_stat_statements", "-c", "pg_stat_statements.track=all"]

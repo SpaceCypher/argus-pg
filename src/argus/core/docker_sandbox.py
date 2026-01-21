@@ -35,15 +35,15 @@ class DockerSandbox(Sandbox):
         try:
             # PULL
             try:
-                self._client.images.get(self.config.postgres_image)
+                self._client.images.get(self.config.image)
             except docker.errors.ImageNotFound:
-                print(f"Pulling image {self.config.postgres_image}...")
-                self._client.images.pull(self.config.postgres_image)
+                print(f"Pulling image {self.config.image}...")
+                self._client.images.pull(self.config.image)
 
             # RUN
             # We map 5432 to a random port
             self._container = self._client.containers.run(
-                self.config.postgres_image,
+                self.config.image,
                 detach=True,
                 remove=True,  # Auto-remove on stop
                 environment={
@@ -52,7 +52,7 @@ class DockerSandbox(Sandbox):
                     "POSTGRES_DB": "argus_sandbox",
                 },
                 ports={"5432/tcp": None},  # Bind to random host port
-                shm_size=self.config.shared_buffers,  # Respect config
+                shm_size="256mb",
                 command=[
                     "postgres",
                     "-c",
@@ -100,7 +100,7 @@ class DockerSandbox(Sandbox):
         host_port = ports["5432/tcp"][0]["HostPort"]
         dsn = f"postgresql://argus:argus@localhost:{host_port}/argus_sandbox"
 
-        deadline = time.time() + self.config.container_timeout_sec
+        deadline = time.time() + self.config.timeout_seconds
 
         while time.time() < deadline:
             try:
@@ -122,7 +122,7 @@ class DockerSandbox(Sandbox):
                 await asyncio.sleep(0.5)
 
         raise TimeoutError(
-            f"Timed out after {self.config.container_timeout_sec}s waiting for Postgres"
+            f"Timed out after {self.config.timeout_seconds}s waiting for Postgres"
         )
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:

@@ -40,7 +40,9 @@ class HeuristicBrain(Brain):
         "coalesce",
         "lower",
         "upper",
+        "upper",
         "length",
+        "text",
     }
 
     async def propose_indexes(
@@ -88,7 +90,9 @@ class HeuristicBrain(Brain):
         """
         Extracts potential column names from a filter string.
         """
-        matches = self._IDENTIFIER_PATTERN.findall(filter_str)
+        # Remove string literals to avoid matching text inside quotes
+        clean_str = self._strip_literals(filter_str)
+        matches = self._IDENTIFIER_PATTERN.findall(clean_str)
         columns = set()
 
         for match in matches:
@@ -103,3 +107,7 @@ class HeuristicBrain(Brain):
             columns.add(candidate)
 
         return columns
+
+    def _strip_literals(self, text: str) -> str:
+        # Simplistic removal of single-quoted strings, handling doubled quotes escaping
+        return re.sub(r"'(''|[^'])*'", "", text)
