@@ -2,6 +2,8 @@
 
 **Argus-PG** is a sandbox-first PostgreSQL index validation system designed to prevent performance regressions. It provides a deterministic environment to test, verify, and measure the impact of database indexes before they reach production.
 
+🌐 **Landing Page**: [https://argus-tau.vercel.app/](https://argus-tau.vercel.app/)
+
 ## 🚀 Mission
 
 Database performance should not be a guessing game. Argus-PG treats index creation as a rigorously tested code deployment:

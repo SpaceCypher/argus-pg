@@ -31,13 +31,12 @@
 - [x] 6.4. End-to-End Validation
 - [x] 7.1. Release Hardening (v0.1.0-mvp)
 - [x] 8.1. Bottleneck Explanation Formatter
+- [x] 9.1. Static Landing Page (https://argus-tau.vercel.app/)
 
 ## 🚧 In Progress
-- [ ] 9.1. Static Landing Page
+- [ ] 10.1. PR Comment Bot
 
 ## ⏳ Pending
-- [ ] 9.1. Static Landing Page
-- [ ] 10.1. PR Comment Bot
 - [ ] 11.1. Logging & Metrics
 - [ ] 11.2. Config Profiles
 - [ ] 12.1. Docker image & Packaging
