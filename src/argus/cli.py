@@ -15,6 +15,7 @@ from argus.core.heuristic_brain import HeuristicBrain
 from argus.core.observer import Observer
 from argus.domain.plans import ExplainPlan
 from argus.domain.query import SqlStatement
+from argus.interfaces.explanation_formatter import ExplanationFormatter
 
 # Configure basic logging
 logging.basicConfig(
@@ -169,6 +170,8 @@ async def run_check(args: argparse.Namespace) -> None:
 
         # 4. Report
         print("\n=== Validation Report ===")
+        formatter = ExplanationFormatter()
+
         for res in verified:
             status = "✅ PASS" if res.validation.improved else "❌ FAIL"
             factor = res.validation.improvement_factor
@@ -182,6 +185,17 @@ async def run_check(args: argparse.Namespace) -> None:
                 print("DDL: (Available in IndexDefinition, migration plan not generated)")
             if res.validation.error:
                 print(f"Error: {res.validation.error}")
+
+            # --explain flag: show bottleneck explanation
+            if getattr(args, "explain", False):
+                print("\n--- Explanation ---")
+                explanation = formatter.format(
+                    before_plan=plan,
+                    after_plan=None,  # after_plan not captured in current flow
+                    index_def=res.definition,
+                    result=res.validation,
+                )
+                print(explanation)
 
     except Exception as e:
         logger.error(f"Check failed: {e}")
@@ -216,6 +230,11 @@ def main() -> None:
     )
     parser_check.add_argument(
         "query_file", type=str, help="Path to file containing SQL query"
+    )
+    parser_check.add_argument(
+        "--explain",
+        action="store_true",
+        help="Show human-readable explanation of bottleneck and resolution",
     )
 
     # Command: Watch
