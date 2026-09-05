@@ -1,3 +1,4 @@
+import os
 from typing import Any, Self
 
 import docker
@@ -11,6 +12,50 @@ from argus.domain.query import PgStatStats, SqlStatement
 from argus.domain.sandbox import SandboxConfig
 
 
+def get_docker_client() -> docker.DockerClient:
+    """
+    Instantiate Docker client with automatic detection of macOS Colima,
+    Docker Desktop, OrbStack, or standard environment sockets.
+    """
+    # 1. Try standard environment
+    try:
+        client = docker.from_env()
+        client.ping()
+        return client
+    except Exception:
+        pass
+
+    # 2. Probe candidate unix sockets on macOS / Linux
+    home = os.path.expanduser("~")
+    candidates = [
+        os.environ.get("DOCKER_HOST"),
+        f"unix://{home}/.colima/default/docker.sock",
+        f"unix://{home}/.docker/run/docker.sock",
+        f"unix://{home}/.orbstack/run/docker.sock",
+        "unix:///var/run/docker.sock",
+    ]
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+        sock_path = candidate.replace("unix://", "")
+        if os.path.exists(sock_path):
+            try:
+                base_url = (
+                    candidate
+                    if candidate.startswith("unix://")
+                    else f"unix://{candidate}"
+                )
+                client = docker.DockerClient(base_url=base_url)
+                client.ping()
+                return client
+            except Exception:
+                continue
+
+    # Fallback to from_env to raise canonical DockerException
+    return docker.from_env()
+
+
 class DockerSandbox(Sandbox):
     """
     Concrete implementation of Sandbox using the Python Docker SDK.
@@ -20,8 +65,8 @@ class DockerSandbox(Sandbox):
     def __init__(self, config: SandboxConfig) -> None:
         self.config = config
         try:
-            self._client: docker.DockerClient = docker.from_env()
-        except DockerException as e:
+            self._client: docker.DockerClient = get_docker_client()
+        except Exception as e:
             raise DependencyError(f"Docker infrastructure failed: {e}") from e
         self._container: Container | None = None
 

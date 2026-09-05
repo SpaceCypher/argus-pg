@@ -1,5 +1,10 @@
+import logging
+
 from argus.core.database import DatabaseAdapter
+from argus.core.schema import SchemaExtractor
 from argus.domain.query import PgStatStats, SqlStatement
+
+logger = logging.getLogger(__name__)
 
 
 class Observer:
@@ -8,22 +13,18 @@ class Observer:
     Uses a safe, read-only DatabaseAdapter.
     """
 
-    def __init__(self, adapter: DatabaseAdapter):
+    def __init__(self, adapter: DatabaseAdapter, min_table_pages: int = 10):
         self._adapter = adapter
+        self.min_table_pages = min_table_pages
 
     async def fetch_top_queries(
-        self, limit: int = 10
+        self, limit: int = 10, filter_small_tables: bool = False
     ) -> list[tuple[SqlStatement, PgStatStats]]:
         """
         Fetch top queries by total execution time from pg_stat_statements.
         Filters for queries in the current database context.
+        Optionally filters out queries running strictly on small tables (< min_table_pages).
         """
-        # We assume the adapter is already connected (entered via context manager)
-        # or will be managed by the caller. The Observer itself is a logic component,
-        # not a connection manager, though it depends on one.
-
-        # Query: join pg_stat_statements with pg_database to filter by current DB.
-        # This prevents picking up stats from other DBs if the extension is shared.
         sql = """
             SELECT 
                 pss.query,
@@ -37,17 +38,37 @@ class Observer:
             LIMIT %s
         """
 
-        # Note: Psycopg v3 uses %s for placeholders
         rows = await self._adapter.fetch_all(sql, [limit])
 
         results: list[tuple[SqlStatement, PgStatStats]] = []
         for row in rows:
-            # row is a tuple/list: (query, calls, total_exec_time, rows)
-            # Depending on row factory, usually tuple.
             raw_query, calls, total_time, row_count = row
 
-            # Skip empty queries if any
             if not raw_query or not raw_query.strip():
+                continue
+
+            # Strip comments and whitespace
+            import re
+
+            cleaned_q = re.sub(r"/\*.*?\*/", "", raw_query, flags=re.DOTALL)
+            cleaned_q = re.sub(r"--[^\n]*", "", cleaned_q).strip()
+            lower_q = cleaned_q.lower()
+            if not lower_q:
+                continue
+
+            # Only monitor optimizable data statements
+            if not any(
+                lower_q.startswith(prefix)
+                for prefix in ("select", "with", "insert", "update", "delete")
+            ):
+                continue
+
+            # Ignore internal pg_stat_statements or catalog polling queries
+            if (
+                "pg_stat_statements" in lower_q
+                or "pg_catalog" in lower_q
+                or "information_schema" in lower_q
+            ):
                 continue
 
             try:
@@ -55,9 +76,40 @@ class Observer:
                 stats = PgStatStats(
                     calls=calls, total_exec_time=float(total_time), rows=row_count
                 )
+
+                if filter_small_tables and self.min_table_pages > 0:
+                    tables = SchemaExtractor.extract_table_names(raw_query)
+                    if tables:
+                        is_large = await self._has_large_table(tables)
+                        if not is_large:
+                            logger.debug(
+                                f"Skipping query on small tables: {raw_query[:50]}"
+                            )
+                            continue
+
                 results.append((statement, stats))
             except ValueError:
-                # Skip invalid statements (validation error in model)
                 continue
 
         return results
+
+    async def _has_large_table(self, table_names: list[str]) -> bool:
+        """
+        Checks pg_class to see if at least one table in the list exceeds min_table_pages.
+        """
+        check_sql = """
+            SELECT c.relname, c.relpages, c.reltuples
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relname = ANY(%s)
+        """
+        try:
+            rows = await self._adapter.fetch_all(check_sql, [table_names])
+            if not rows:
+                return True  # If not found in catalog, don't drop conservatively
+            return any(
+                (r[1] or 0) >= self.min_table_pages or (r[2] or 0) >= 1000 for r in rows
+            )
+        except Exception as e:
+            logger.debug(f"Failed to check table sizes in pg_class: {e}")
+            return True

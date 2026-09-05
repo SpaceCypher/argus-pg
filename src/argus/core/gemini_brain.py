@@ -1,9 +1,10 @@
+import asyncio
 import json
 import logging
 import os
 import re
+from typing import Any
 
-import asyncio
 from google import genai
 from pydantic import ValidationError
 
@@ -26,7 +27,7 @@ class GeminiBrain(Brain):
     _NUMERIC_LITERAL_PATTERN = re.compile(r"\b\d+\.?\d*\b")
 
     def __init__(
-        self, api_key: str | None = None, model_name: str = "gemini-1.5-flash"
+        self, api_key: str | None = None, model_name: str = "gemini-3.5-flash"
     ):
         self._api_key = api_key or os.environ.get("GEMINI_API_KEY")
         self._model_name = model_name
@@ -39,7 +40,7 @@ class GeminiBrain(Brain):
             # We explicitly pass it here if provided/found.
             # Note: The new library might expect GOOGLE_API_KEY or GEMINI_API_KEY.
             # We will rely on passing it explicitly if we have it.
-             # but the SDK might prefer env vars.
+            # but the SDK might prefer env vars.
             os.environ["GEMINI_API_KEY"] = self._api_key
             try:
                 self._client = genai.Client(api_key=self._api_key)
@@ -59,35 +60,25 @@ class GeminiBrain(Brain):
         prompt = self._build_prompt(redacted_sql, plan)
 
         try:
-            # generate_content is synchronous in the basic usage examples,
-            # but usually LLM calls should be async.
-            # The new library's async support might be `generate_content_async` or similar.
-            # Documentation implies `client.aio.models.generate_content`.
-            # Let's check if we can run it in a thread or if there is an async client.
-            # The user snippet used synchronous `generate_content`.
-            # For safety in async context, we'll wrap it or use async client if apparent.
-            # User snippet: `client.models.generate_content(...)`
-            # We will use the async client if available, or run_in_executor.
-
-            # Attempting to use the async client pattern if it exists in v1
-            # Based on recent SDKs, `client.aio` often holds the async version.
-            # If not, we fall back to sync in thread.
-
-            if hasattr(self._client, "aio"):
-                response = await self._client.aio.models.generate_content(
+            client = self._client
+            if hasattr(client, "aio"):
+                response: Any = await client.aio.models.generate_content(
                     model=self._model_name, contents=prompt
                 )
             else:
-                # Fallback to sync run in thread
                 loop = asyncio.get_running_loop()
-                response = await loop.run_in_executor(
-                    None,
-                    lambda: self._client.models.generate_content(
-                        model=self._model_name, contents=prompt
-                    ),
-                )
 
-            return self._parse_response(response.text, query.query_id)
+                def _call() -> Any:
+                    return client.models.generate_content(
+                        model=self._model_name, contents=prompt
+                    )
+
+                response = await loop.run_in_executor(None, _call)
+
+            response_text = getattr(response, "text", None)
+            if response_text and isinstance(response_text, str):
+                return self._parse_response(response_text, str(query.query_id))
+            return []
 
         except Exception as e:
             # Silent degradation

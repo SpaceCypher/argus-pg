@@ -1,0 +1,14 @@
+[database]
+dsn = "postgresql://argus:argus@localhost:5444/argus_sandbox"
+
+[sandbox]
+image = "postgres:16-alpine"
+timeout_seconds = 300
+
+[brain]
+provider = "gemini"
+
+[brain.gemini]
+enabled = true
+api_key = ""
+model = "gemini-3.5-flash"

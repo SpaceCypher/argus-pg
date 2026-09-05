@@ -83,9 +83,7 @@ class ExplanationFormatter:
         lines.append(f"- Speedup: {factor:.2f}x")
 
         # Cost comparison
-        lines.append(
-            f"- Cost: {result.original_cost:.2f} -> {result.new_cost:.2f}"
-        )
+        lines.append(f"- Cost: {result.original_cost:.2f} -> {result.new_cost:.2f}")
 
         return "\n".join(lines)
 

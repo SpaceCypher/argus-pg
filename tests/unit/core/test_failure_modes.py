@@ -16,7 +16,10 @@ from argus.domain.sandbox import SandboxConfig
 # --- 1. Docker Unavailable ---
 def test_sandbox_docker_unavailable():
     """Verify DependencyError when Docker client cannot be initialized."""
-    with patch("docker.from_env", side_effect=DockerException("Connection refused")):
+    with patch(
+        "argus.core.docker_sandbox.get_docker_client",
+        side_effect=DockerException("Connection refused"),
+    ):
         config = SandboxConfig(postgres_image="postgres:16-alpine")
 
         # Should raise immediately on init if we check there, or on usage.
@@ -79,18 +82,19 @@ async def test_brain_llm_failure():
         )
     )
 
-    # Mock the generative model to raise exception
-    with patch("google.generativeai.GenerativeModel") as MockModel:
-        mock_chat = AsyncMock()
-        mock_chat.send_message_async.side_effect = Exception("API Quota Exceeded")
+    # Mock the client model to raise exception
+    mock_client = MagicMock()
+    mock_aio = MagicMock()
+    mock_models = AsyncMock()
+    mock_models.generate_content.side_effect = Exception("API Quota Exceeded")
+    mock_aio.models = mock_models
+    mock_client.aio = mock_aio
+    brain._client = mock_client
+    brain._configured = True
 
-        instance = MockModel.return_value
-        instance.start_chat.return_value = mock_chat
-
-        # Should NOT raise, but return empty list
-        suggestions = await brain.propose_indexes(query, plan)
-        assert suggestions == []
-        # Optionally check if we logged an error, but return value is key contract.
+    # Should NOT raise, but return empty list
+    suggestions = await brain.propose_indexes(query, plan)
+    assert suggestions == []
 
 
 # --- 4. No Improvement (Degradation) ---

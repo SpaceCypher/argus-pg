@@ -5,6 +5,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
+from argus.domain.sandbox import SandboxConfig
+
 # --- Configuration Models ---
 
 
@@ -12,22 +14,15 @@ class DatabaseConfig(BaseModel):
     dsn: str = Field(..., description="PostgreSQL connection string")
 
 
-class SandboxConfig(BaseModel):
-    image: str = Field("postgres:16", description="Docker image for sandbox")
-    cleanup: bool = Field(True, description="Remove container after use")
-    timeout_seconds: int = Field(300, description="Max execution time per validation")
-    memory_mb: int = Field(1024, description="Container memory limit in MB")
-
-
 class GeminiConfig(BaseModel):
     enabled: bool = Field(False)
     api_key: str | None = Field(None)
-    model: str = Field("gemini-1.5-flash")
+    model: str = Field("gemini-3.5-flash")
 
 
 class BrainConfig(BaseModel):
-    provider: Literal["heuristic", "gemini"] = Field("heuristic")
-    gemini: GeminiConfig = Field(default_factory=GeminiConfig)
+    provider: Literal["heuristic", "gemini"] = "heuristic"
+    gemini: GeminiConfig = Field(default_factory=lambda: GeminiConfig())
 
 
 class ArgusConfig(BaseModel):
@@ -36,8 +31,8 @@ class ArgusConfig(BaseModel):
     """
 
     database: DatabaseConfig
-    sandbox: SandboxConfig = Field(default_factory=SandboxConfig)
-    brain: BrainConfig = Field(default_factory=BrainConfig)
+    sandbox: SandboxConfig = Field(default_factory=lambda: SandboxConfig())
+    brain: BrainConfig = Field(default_factory=lambda: BrainConfig())
 
 
 class ConfigurationError(Exception):

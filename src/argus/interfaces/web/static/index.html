@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Argus-PG Mission Control</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0d14;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.75);
+            --bg-card-hover: rgba(24, 33, 53, 0.85);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(99, 102, 241, 0.35);
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.25);
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.12);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.12);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.12);
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            line-height: 1.5;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.09) 0%, transparent 45%),
+                radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.07) 0%, transparent 45%);
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 1360px;
+            margin: 0 auto;
+            padding: 2rem 1.75rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            box-shadow: 0 0 24px var(--accent-glow);
+            flex-shrink: 0;
+        }
+
+        .logo-text h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #ffffff;
+            white-space: nowrap;
+        }
+
+        .logo-text p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Status Pills Cluster */
+        .status-cluster {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .dot-green {
+            background: var(--success);
+            box-shadow: 0 0 6px var(--success);
+        }
+
+        .dot-yellow {
+            background: var(--warning);
+            box-shadow: 0 0 6px var(--warning);
+        }
+
+        .dot-red {
+            background: var(--danger);
+            box-shadow: 0 0 6px var(--danger);
+        }
+
+        .pill-tag {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        /* System Notice Banner */
+        .system-banner {
+            display: none;
+            background: var(--warning-bg);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 10px;
+            padding: 0.85rem 1.25rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.84rem;
+            color: #fbbf24;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .system-banner.error {
+            background: var(--danger-bg);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .system-banner code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: #fff;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1080px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            backdrop-filter: blur(14px);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--border-highlight);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #ffffff;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Form Controls */
+        .editor-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        textarea {
+            width: 100%;
+            height: 140px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.85rem;
+            color: #38bdf8;
+            font-family: var(--font-mono);
+            font-size: 0.88rem;
+            line-height: 1.4;
+            resize: vertical;
+            outline: none;
+            transition: border 0.2s, box-shadow 0.2s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .form-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .select-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.55rem 0.85rem;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        select:focus {
+            border-color: var(--accent);
+        }
+
+        button.btn-primary {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.35rem;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 14px var(--accent-glow);
+        }
+
+        button.btn-primary:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        button.btn-primary:active {
+            transform: translateY(0);
+        }
+
+        button.btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: 8px;
+            padding: 0.45rem 0.85rem;
+            font-weight: 500;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        button.btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        button.btn-danger-outline {
+            background: transparent;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+            border-radius: 8px;
+            padding: 0.45rem 0.85rem;
+            font-weight: 500;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        button.btn-danger-outline:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: var(--danger);
+        }
+
+        button.btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 0.45rem 0.95rem;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+            transition: all 0.2s;
+        }
+
+        button.btn-success:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        button.btn-table-action {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            color: #a5b4fc;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        button.btn-table-action:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        /* Telemetry Table */
+        .table-wrap {
+            overflow-x: auto;
+            max-height: 440px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            text-align: left;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            padding: 0.75rem 0.85rem;
+            background: #131c2e;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            z-index: 2;
+        }
+
+        td {
+            padding: 0.7rem 0.85rem;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+
+        tr.query-row {
+            transition: background 0.15s;
+        }
+
+        tr.query-row:hover td {
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .badge-scan {
+            display: inline-block;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-scan.indexed {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        /* Result Display Card */
+        .result-box {
+            margin-top: 1.25rem;
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 10px;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .speedup-stat {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.85rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .speedup-number {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: var(--success);
+            line-height: 1;
+        }
+
+        .cost-comparison {
+            display: flex;
+            gap: 0.6rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+
+        .cost-pill {
+            background: var(--bg-secondary);
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-family: var(--font-mono);
+        }
+
+        .action-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-top: 0.85rem;
+            flex-wrap: wrap;
+        }
+
+        .code-block {
+            background: #05070a;
+            padding: 0.85rem 5rem 0.85rem 0.85rem;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            color: #38bdf8;
+            position: relative;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            margin-top: 0.5rem;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover { 
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #1e293b;
+            border: 1px solid var(--border-highlight);
+            color: #fff;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Lockup & Subsystem Status -->
+        <header>
+            <div class="logo">
+                <div class="logo-icon">👁️</div>
+                <div class="logo-text">
+                    <h1>Argus-PG Mission Control</h1>
+                    <p>Sandbox-First Autonomous Database Indexing</p>
+                </div>
+            </div>
+
+            <!-- Subsystem Status Pills -->
+            <div class="status-cluster" id="status-cluster">
+                <!-- Database Pill -->
+                <div class="status-pill" id="pill-db" title="Target PostgreSQL Connection">
+                    <span class="dot dot-yellow" id="dot-db"></span>
+                    <span>Database:</span>
+                    <span class="pill-tag" id="text-db">Checking...</span>
+                </div>
+
+                <!-- Docker Sandbox Pill -->
+                <div class="status-pill" id="pill-docker" title="Docker Container Runtime">
+                    <span class="dot dot-yellow" id="dot-docker"></span>
+                    <span>Sandbox:</span>
+                    <span class="pill-tag" id="text-docker">Checking...</span>
+                </div>
+
+                <!-- Brain Pill -->
+                <div class="status-pill" id="pill-brain" title="Active Indexing Brain Engine">
+                    <span class="dot dot-green"></span>
+                    <span>Brain:</span>
+                    <span class="pill-tag" id="text-brain">Gemini (gemini-3.5-flash)</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic Diagnostics Notice Banner -->
+        <div id="system-banner" class="system-banner">
+            <div id="banner-text">Target database or Docker sandbox requires attention.</div>
+            <div id="banner-action"></div>
+        </div>
+
+        <div class="grid">
+            <!-- Left: Query Optimization Playground -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⚡ Optimize Query (Sandbox Experiment)</h2>
+                </div>
+                
+                <form id="check-form">
+                    <div class="editor-label">
+                        <span>SQL Statement</span>
+                        <span style="color:var(--accent); cursor:pointer;" onclick="setDemoQuery()">Load Demo Query</span>
+                    </div>
+                    <textarea id="query-input" placeholder="SELECT * FROM users WHERE email = 'user_42000@example.com';">SELECT * FROM users WHERE email = 'user_42000@example.com';</textarea>
+                    
+                    <div class="form-row">
+                        <div class="select-group">
+                            <select id="brain-select">
+                                <option value="gemini" selected>Brain: Google Gemini AI (3.5-flash)</option>
+                                <option value="heuristic">Brain: Heuristic (AST Rules)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary" id="btn-run-check">
+                            <span>🚀 Validate in Sandbox</span>
+                        </button>
+                    </div>
+                </form>
+
+                <div id="check-output" style="display:none; margin-top: 1.25rem;"></div>
+            </div>
+
+            <!-- Right: Database Live Audit Telemetry -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔍 Target Database Telemetry (Top Slow Queries)</h2>
+                    <div class="header-actions">
+                        <button class="btn-danger-outline" id="btn-reset-stats" title="Clear pg_stat_statements metrics">🧹 Reset Stats</button>
+                        <button class="btn-secondary" id="btn-refresh-audit">🔄 Refresh</button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table id="audit-table">
+                        <thead>
+                            <tr>
+                                <th>Query / Fingerprint</th>
+                                <th>Calls</th>
+                                <th>Mean (ms)</th>
+                                <th>Scan Type</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-body">
+                            <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding: 2rem;">Connecting to database telemetry...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">Copied SQL to clipboard!</div>
+
+    <script>
+        // Global state
+        window.activeSuggestions = [];
+        window.auditQueries = [];
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 2500);
+        }
+
+        function clearResultPanel() {
+            const output = document.getElementById('check-output');
+            if (output) {
+                output.style.display = 'none';
+                output.innerHTML = '';
+            }
+            window.activeSuggestions = [];
+        }
+
+        function setDemoQuery() {
+            document.getElementById('query-input').value = "SELECT * FROM users WHERE email = 'user_42000@example.com';";
+            clearResultPanel();
+        }
+
+        function testQueryAtIndex(idx) {
+            if (window.auditQueries && window.auditQueries[idx]) {
+                const q = window.auditQueries[idx].raw_query;
+                document.getElementById('query-input').value = q;
+                clearResultPanel();
+                document.getElementById('btn-run-check').click();
+            }
+        }
+
+        function loadQueryToEditor(idx) {
+            if (window.auditQueries && window.auditQueries[idx]) {
+                document.getElementById('query-input').value = window.auditQueries[idx].raw_query;
+                clearResultPanel();
+                showToast("Loaded query into editor");
+            }
+        }
+
+        function copyUpSql(idx) {
+            if (window.activeSuggestions[idx]) {
+                navigator.clipboard.writeText(window.activeSuggestions[idx].up_sql);
+                showToast("📋 Copied Up Migration SQL");
+            }
+        }
+
+        function copyDownSql(idx) {
+            if (window.activeSuggestions[idx]) {
+                navigator.clipboard.writeText(window.activeSuggestions[idx].down_sql);
+                showToast("↩️ Copied Rollback (Down) SQL");
+            }
+        }
+
+        function exportMigration(idx) {
+            const item = window.activeSuggestions[idx];
+            if (!item) return;
+
+            const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+            const content = `-- Argus-PG Autonomous Index Migration
+-- Generated: ${new Date().toISOString()}
+-- Index: ${item.index_name}
+-- Verified Speedup: ${item.improvement_factor}x
+
+-- [UP MIGRATION]
+${item.up_sql}
+
+-- [DOWN MIGRATION]
+${item.down_sql}
+`;
+            const blob = new Blob([content], { type: 'text/sql' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${timestamp}_add_${item.index_name}.sql`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("💾 Exported migration SQL file");
+        }
+
+        async function applyIndex(idx) {
+            const item = window.activeSuggestions[idx];
+            if (!item) return;
+
+            const confirmed = confirm(`Are you sure you want to execute this index migration on the target database?\n\n${item.up_sql}`);
+            if (!confirmed) return;
+
+            const btn = document.getElementById(`btn-apply-${idx}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span> Applying to Target DB...';
+            }
+
+            try {
+                const res = await fetch('/api/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sql: item.up_sql })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Failed to apply index');
+
+                showToast("🎉 Index applied successfully to target database!");
+                if (btn) {
+                    btn.innerHTML = '✅ Applied to Target DB';
+                    btn.className = 'btn-secondary';
+                }
+                setTimeout(fetchAudit, 1500);
+            } catch (err) {
+                alert("Apply error: " + err.message);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '🔒 Apply to Target DB';
+                }
+            }
+        }
+
+        async function resetStats() {
+            if (!confirm("Are you sure you want to reset all pg_stat_statements telemetry on the target database?")) {
+                return;
+            }
+            try {
+                const res = await fetch('/api/reset-stats', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Reset failed');
+                showToast("🧹 Statistics reset successfully!");
+                await fetchAudit();
+            } catch (e) {
+                alert("Reset error: " + e.message);
+            }
+        }
+
+        async function fetchHealth() {
+            const banner = document.getElementById('system-banner');
+            const bannerText = document.getElementById('banner-text');
+
+            const dotDb = document.getElementById('dot-db');
+            const textDb = document.getElementById('text-db');
+            const dotDocker = document.getElementById('dot-docker');
+            const textDocker = document.getElementById('text-docker');
+            const textBrain = document.getElementById('text-brain');
+
+            try {
+                const res = await fetch('/api/health');
+                const data = await res.json();
+
+                // DB Status
+                if (data.database && data.database.connected) {
+                    dotDb.className = 'dot dot-green';
+                    textDb.textContent = 'Online';
+                } else {
+                    dotDb.className = 'dot dot-red';
+                    textDb.textContent = 'Offline';
+                }
+
+                // Docker Status
+                if (data.docker && data.docker.available) {
+                    dotDocker.className = 'dot dot-green';
+                    textDocker.textContent = 'Ready';
+                } else {
+                    dotDocker.className = 'dot dot-red';
+                    textDocker.textContent = 'Offline';
+                }
+
+                // Brain Status
+                if (data.brain) {
+                    const brainName = data.brain.provider === 'gemini' 
+                        ? `Gemini (${data.brain.gemini_model || '3.5-flash'})` 
+                        : 'Heuristic';
+                    textBrain.textContent = brainName;
+                }
+
+                // Diagnostics Banner
+                const issues = [];
+                if (!data.database.connected) {
+                    issues.push(`Target DB is offline (${data.database.error || 'Connection refused'}). Run <code>make setup-demo</code> to start test container.`);
+                }
+                if (!data.docker.available) {
+                    issues.push(`Docker daemon is unavailable. Start Colima (<code>colima start</code>) or Docker Desktop.`);
+                }
+
+                if (issues.length > 0) {
+                    banner.style.display = 'flex';
+                    banner.className = 'system-banner error';
+                    bannerText.innerHTML = issues.join(' &bull; ');
+                } else {
+                    banner.style.display = 'none';
+                }
+
+            } catch (e) {
+                dotDb.className = 'dot dot-red';
+                textDb.textContent = 'API Error';
+                dotDocker.className = 'dot dot-red';
+                textDocker.textContent = 'API Error';
+            }
+        }
+
+        async function fetchAudit() {
+            const tbody = document.getElementById('audit-body');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Fetching pg_stat_statements telemetry...</td></tr>';
+            try {
+                const res = await fetch('/api/audit?limit=8');
+                const data = await res.json();
+                window.auditQueries = data.queries || [];
+
+                if (!data.queries || data.queries.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align:center; color:var(--text-muted); padding:2rem;">
+                                No queries recorded in pg_stat_statements.<br>
+                                <span style="font-size:0.75rem; color:#6b7280;">Run queries against your target DB or execute <code>make setup-demo</code>.</span>
+                            </td>
+                        </tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.queries.map((q, idx) => {
+                    const isIndexed = q.node_type.toLowerCase().includes('index');
+                    return `
+                    <tr class="query-row">
+                        <td style="color:#60a5fa; cursor:pointer;" onclick="loadQueryToEditor(${idx})" title="${q.raw_query}">
+                            ${q.query_id}
+                        </td>
+                        <td>${q.calls}</td>
+                        <td>${q.mean_exec_time_ms}</td>
+                        <td><span class="badge-scan ${isIndexed ? 'indexed' : ''}">${q.node_type}</span></td>
+                        <td>
+                            <button class="btn-table-action" onclick="testQueryAtIndex(${idx})">⚡ Test</button>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            } catch (e) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align:center; color:var(--danger); padding:1.5rem;">
+                            Target DB telemetry unavailable. Run <code>make setup-demo</code> to seed and launch demo database.
+                        </td>
+                    </tr>`;
+            }
+        }
+
+        document.getElementById('check-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-run-check');
+            const output = document.getElementById('check-output');
+            const query = document.getElementById('query-input').value;
+            const brain = document.getElementById('brain-select').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> <span>Running Sandbox Simulation...</span>';
+            output.style.display = 'block';
+            output.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; padding:0.5rem 0;">1. Provisioning clean Docker sandbox &bull; 2. Hydrating synthetic twin &bull; 3. Benchmarking A/B latency...</div>';
+
+            try {
+                const res = await fetch('/api/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, brain_provider: brain })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Validation failed');
+
+                window.activeSuggestions = data.results || [];
+
+                if (data.status === 'no_suggestions' || !data.results || data.results.length === 0) {
+                    output.innerHTML = `<div class="result-box" style="border-color:var(--warning);">⚠️ ${data.message || 'No indexes suggested. The query is already optimized or non-indexable.'}</div>`;
+                } else {
+                    output.innerHTML = data.results.map((r, idx) => {
+                        const applyBtnId = `btn-apply-${idx}`;
+                        return `
+                        <div class="result-box" style="border-color: ${r.improved ? 'var(--success)' : 'var(--danger)'};">
+                            <div class="speedup-stat">
+                                <div>
+                                    <div class="speedup-number">${r.improved ? r.improvement_factor + 'x' : '1.0x'}</div>
+                                    <div style="font-weight:600; font-size:0.9rem; color: ${r.improved ? 'var(--success)' : 'var(--danger)'};">
+                                        ${r.improved ? '🚀 Performance Speedup Verified' : '❌ No Measurable Gain'}
+                                    </div>
+                                </div>
+                                <div class="cost-comparison">
+                                    <span class="cost-pill">Before: ${r.original_cost} ms</span>
+                                    <span class="cost-pill" style="color:var(--success);">After: ${r.new_cost} ms</span>
+                                </div>
+                            </div>
+                            
+                            <p style="font-size:0.85rem; margin-top:0.4rem;"><strong>Index Hypothesized:</strong> <code>${r.index_name}</code></p>
+                            
+                            <div class="code-block">
+                                <button class="copy-btn" onclick="copyUpSql(${idx})">Copy SQL</button>
+                                ${r.up_sql}
+                            </div>
+
+                            <div class="action-toolbar">
+                                <button class="btn-secondary" onclick="copyUpSql(${idx})">
+                                    📋 Copy Up SQL
+                                </button>
+                                <button class="btn-secondary" onclick="copyDownSql(${idx})">
+                                    ↩️ Copy Rollback SQL
+                                </button>
+                                <button class="btn-secondary" onclick="exportMigration(${idx})">
+                                    💾 Export Migration (.sql)
+                                </button>
+                                ${r.improved ? `
+                                <button id="${applyBtnId}" class="btn-success" onclick="applyIndex(${idx})">
+                                    🔒 Apply to Target DB
+                                </button>` : ''}
+                            </div>
+
+                            <pre style="margin-top:0.85rem; font-size:0.8rem; color:var(--text-muted); white-space:pre-wrap; font-family:var(--font-mono);">${r.explanation}</pre>
+                        </div>
+                    `;
+                    }).join('');
+                }
+            } catch (err) {
+                output.innerHTML = `<div class="result-box" style="border-color:var(--danger); color:var(--danger);"><strong>Error:</strong> ${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🚀 Validate in Sandbox</span>';
+            }
+        });
+
+        // Reset result panel when Brain selection or Query input changes
+        document.getElementById('brain-select').addEventListener('change', (e) => {
+            clearResultPanel();
+            const brainName = e.target.value === 'gemini' ? 'Google Gemini AI' : 'Heuristic Rules';
+            showToast(`Switched to ${brainName}`);
+        });
+
+        document.getElementById('query-input').addEventListener('input', () => {
+            clearResultPanel();
+        });
+
+        document.getElementById('btn-refresh-audit').addEventListener('click', fetchAudit);
+        document.getElementById('btn-reset-stats').addEventListener('click', resetStats);
+
+        fetchHealth();
+        fetchAudit();
+        setInterval(fetchHealth, 10000);
+    </script>
+</body>
+</html>

@@ -1,4 +1,8 @@
-from pydantic import BaseModel, Field
+from typing import Any
+
+from pydantic import BaseModel, Field, model_validator
+
+from argus.domain.index import ValidationResult  # Re-export for domain convenience
 
 
 class SandboxConfig(BaseModel):
@@ -6,10 +10,11 @@ class SandboxConfig(BaseModel):
     Configuration for the ephemeral Docker environment.
     """
 
-    postgres_image: str = Field("postgres:15-alpine", description="Docker image to use")
+    postgres_image: str = Field("postgres:16-alpine", description="Docker image to use")
     container_memory_limit: str = Field("512m", description="Memory limit (e.g., 512m)")
     shared_buffers: str = Field("128MB", description="Postgres shared_buffers setting")
     max_prepared_transactions: int = Field(0, description="Disable two-phase commit")
+    cleanup: bool = Field(True, description="Remove container after use")
 
     # Timeouts
     statement_timeout_ms: int = Field(
@@ -19,27 +24,26 @@ class SandboxConfig(BaseModel):
         30, description="Max lifespan of the sandbox container"
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def handle_aliases(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data = dict(data)
+            if "image" in data and "postgres_image" not in data:
+                data["postgres_image"] = data.pop("image")
+            if "timeout_seconds" in data and "container_timeout_sec" not in data:
+                data["container_timeout_sec"] = data.pop("timeout_seconds")
+            if "memory_mb" in data and "container_memory_limit" not in data:
+                data["container_memory_limit"] = f"{data.pop('memory_mb')}m"
+        return data
 
-class ValidationResult(BaseModel):
-    """
-    Result of a completed index validation experiment.
-    """
+    @property
+    def image(self) -> str:
+        return self.postgres_image
 
-    run_id: str = Field(..., description="Unique run identifier")
+    @property
+    def timeout_seconds(self) -> int:
+        return self.container_timeout_sec
 
-    # Outcomes
-    baseline_cost: float = Field(..., description="Cost without index")
-    optimized_cost: float = Field(..., description="Cost with index")
-    baseline_time_ms: float = Field(..., description="Execution time without index")
-    optimized_time_ms: float = Field(..., description="Execution time with index")
 
-    # Analysis
-    cost_improvement_factor: float = Field(
-        ..., description="baseline / optimized (e.g. 2.5x)"
-    )
-    time_improvement_factor: float = Field(
-        ..., description="baseline / optimized (e.g. 2.5x)"
-    )
-
-    is_regression: bool = Field(False, description="Did performance get worse?")
-    error_message: str | None = Field(None, description="If validation failed")
+__all__ = ["SandboxConfig", "ValidationResult"]
