@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Argus-PG | Sandbox-First Autonomous PostgreSQL Index Advisor & Validator</title>
+  <meta name="description" content="An automated DBA that never touches production. Argus-PG spins up isolated Docker twins, hydrates synthetic data, and empirically proves PostgreSQL index speedup before suggesting non-blocking DDL.">
+  <meta name="keywords" content="PostgreSQL, Index Advisor, Database Optimization, Postgres DBA, EXPLAIN ANALYZE, Docker Sandbox, SQL Optimization">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Ambient Query Telemetry Canvas -->
+  <canvas id="telemetry-canvas"></canvas>
+  <div class="ambient-glow ambient-glow-1"></div>
+  <div class="ambient-glow ambient-glow-2"></div>
+  <div class="ambient-glow ambient-glow-3"></div>
+
+  <!-- Header Navigation HUD -->
+  <header class="site-header">
+    <div class="container">
+      <div class="nav-content">
+        <a href="#" class="brand-link">
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
+            <rect width="64" height="64" rx="14" fill="#070A10" stroke="#1E293B" stroke-width="2"/>
+            <circle cx="32" cy="32" r="20" stroke="#6366F1" stroke-width="2" stroke-dasharray="4 2"/>
+            <circle cx="32" cy="32" r="10" stroke="#22D3EE" stroke-width="2"/>
+            <circle cx="32" cy="32" r="4" fill="#10B981"/>
+          </svg>
+          <span>Argus<span style="color: var(--accent-indigo-light);">-PG</span></span>
+          <span class="brand-badge">v0.1.0-mvp</span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#sandbox-lab">Sandbox Lab</a></li>
+          <li><a href="#how-it-works">Architecture</a></li>
+          <li><a href="#safety">Safety Invariants</a></li>
+          <li><a href="#dashboard">Mission Control</a></li>
+          <li><a href="#quickstart">Quickstart</a></li>
+        </ul>
+
+        <div class="nav-cta-group">
+          <a href="https://github.com/SpaceCypher/argus-pg" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            GitHub
+          </a>
+          <a href="#quickstart" class="btn btn-primary btn-sm">
+            Install CLI
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ==========================================================================
+         HERO SECTION
+         ========================================================================== -->
+    <section class="hero-section">
+      <div class="container">
+        <div class="hero-grid">
+          <div class="hero-content">
+            <div class="system-status-pill">
+              <span class="status-dot"></span>
+              <span>SANDBOX ENGINE ONLINE • ZERO PROD WRITES</span>
+            </div>
+
+            <h1 class="hero-title">
+              An Automated DBA That <span class="text-gradient-indigo">Never Touches</span> Production.
+            </h1>
+
+            <p class="hero-subtitle">
+              Argus-PG continuously identifies PostgreSQL sequential scan bottlenecks, clones your schema into isolated Docker sandboxes, hydrates synthetic data, and empirically proves index speedup before surfacing non-blocking DDL.
+            </p>
+
+            <div class="hero-actions">
+              <a href="#sandbox-lab" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Launch Sandbox Lab
+              </a>
+              <a href="#quickstart" class="btn btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="4 17 10 11 4 5"/>
+                  <line x1="12" y1="19" x2="20" y2="19"/>
+                </svg>
+                argus audit --dsn ...
+              </a>
+            </div>
+
+            <div class="hero-metrics-bar">
+              <div class="metric-item">
+                <span class="metric-val" style="color: var(--accent-emerald-light);">0 Bytes</span>
+                <span class="metric-lbl">Production Mutation</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-val" style="color: var(--accent-cyan);">50,000+</span>
+                <span class="metric-lbl">Synthetic Twin Rows</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-val" style="color: var(--accent-indigo-light);">82x – 190x</span>
+                <span class="metric-lbl">Measured Speedup</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero Terminal Visual -->
+          <div class="terminal-card">
+            <div class="terminal-header">
+              <div class="terminal-dots">
+                <div class="terminal-dot dot-red"></div>
+                <div class="terminal-dot dot-yellow"></div>
+                <div class="terminal-dot dot-green"></div>
+              </div>
+              <span class="terminal-title">argus-pg v0.1.0 • telemetry HUD</span>
+            </div>
+            <div class="terminal-body">
+              <div style="color: var(--text-secondary);">
+                <span style="color: var(--accent-emerald);">$</span> argus audit --dsn postgresql://read_only@prod-replica:5432/db
+              </div>
+              <div style="color: var(--text-muted); margin-top: 10px;">
+                [INFO] Extracting schema catalogs from production (Read-Only)...<br>
+                [INFO] Found 14 slow query patterns in <span style="color: var(--accent-cyan);">pg_stat_statements</span>.<br>
+                [INFO] Spawning Docker twin sandbox: <span style="color: var(--accent-indigo-light);">argus-sandbox-e9f2a</span> (port 54321)...<br>
+                [INFO] Hydrating 50,000 synthetic rows with statistical distribution...<br>
+                [BENCHMARK] Baseline Seq Scan: <span style="color: var(--accent-rose);">367.42ms</span> (Cost: 4.46)<br>
+                [HYPOTHESIS] Brain proposed: <span style="color: var(--accent-cyan);">idx_users_email</span><br>
+                [VERIFY] Index Scan applied in sandbox: <span style="color: var(--accent-emerald-light);">4.45ms</span> (Cost: 0.05)<br>
+                <div style="margin-top: 12px; padding: 8px 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--border-emerald); border-radius: 6px; color: var(--accent-emerald-light); font-weight: 600;">
+                  ✓ PASS | Improvement: 82.34x speedup (98.8% cost drop)
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         INTERACTIVE SANDBOX LAB (THE CROWN JEWEL)
+         ========================================================================== -->
+    <section id="sandbox-lab" class="sandbox-lab-section">
+      <div class="container">
+        <div style="text-align: center; max-width: 720px; margin: 0 auto;">
+          <span class="section-tag tag-cyan">Empirical Validation Engine</span>
+          <h2 class="section-heading">Interactive Sandbox Laboratory</h2>
+          <p class="section-desc" style="margin: 0 auto;">
+            Experience how Argus-PG validates index recommendations in a completely isolated environment without risking table locks or database stalls.
+          </p>
+        </div>
+
+        <div class="sandbox-lab-container">
+          <!-- Controls Bar -->
+          <div class="lab-controls-bar">
+            <div class="query-preset-tabs">
+              <button class="tab-btn active" data-preset="orders">Multi-Column Filter</button>
+              <button class="tab-btn" data-preset="users">Email Auth Lookup</button>
+              <button class="tab-btn" data-preset="jsonb">JSONB Event Query</button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <span id="lab-target-table" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+                Target: orders (50,000 rows)
+              </span>
+              <button id="btn-run-sandbox" class="lab-action-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Run Sandbox Experiment
+              </button>
+            </div>
+          </div>
+
+          <!-- Split View -->
+          <div class="lab-split-view">
+            <!-- Left Pane: Query & Stepper -->
+            <div class="lab-pane lab-pane-left">
+              <div class="pane-header">
+                <span class="pane-label">Observed Query Workload</span>
+                <span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-indigo-light);">SQL AST INTROSPECTION</span>
+              </div>
+
+              <div id="lab-sql-display" class="code-editor-box">
+SELECT id, customer_id, total_cents, status, created_at
+FROM orders
+WHERE customer_id = 4289 
+  AND status = 'pending_settlement'
+ORDER BY created_at DESC 
+LIMIT 25;
+              </div>
+
+              <div class="pane-header" style="margin-top: 12px;">
+                <span class="pane-label">Autonomous Lifecycle Execution</span>
+                <span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-emerald-light);">DOCKER ISOLATION</span>
+              </div>
+
+              <div class="stepper-pipeline">
+                <div class="step-card done">
+                  <div class="step-indicator">✓</div>
+                  <div class="step-info">
+                    <div class="step-title">1. Extract Catalog Schema</div>
+                    <div class="step-detail">Introspect table DDL & column data types (0 data rows copied)</div>
+                  </div>
+                </div>
+
+                <div class="step-card done">
+                  <div class="step-indicator">✓</div>
+                  <div class="step-info">
+                    <div class="step-title">2. Spawn Ephemeral Twin</div>
+                    <div class="step-detail">Dedicated PostgreSQL 16 container on private Docker bridge</div>
+                  </div>
+                </div>
+
+                <div class="step-card done">
+                  <div class="step-indicator">✓</div>
+                  <div class="step-info">
+                    <div class="step-title">3. Hydrate Synthetic Cardinality</div>
+                    <div class="step-detail">50,000 synthetic rows generated matching data distributions</div>
+                  </div>
+                </div>
+
+                <div class="step-card done">
+                  <div class="step-indicator">✓</div>
+                  <div class="step-info">
+                    <div class="step-title">4. A/B Benchmark & Measure Buffers</div>
+                    <div class="step-detail">EXPLAIN (ANALYZE, BUFFERS) baseline vs candidate index</div>
+                  </div>
+                </div>
+
+                <div class="step-card done">
+                  <div class="step-indicator">✓</div>
+                  <div class="step-info">
+                    <div class="step-title">5. Decision Gate & Safe DDL</div>
+                    <div class="step-detail">Threshold verified: emits non-blocking CREATE INDEX CONCURRENTLY</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Pane: Proof & AST Diff -->
+            <div class="lab-pane lab-pane-right">
+              <div class="pane-header">
+                <span class="pane-label">Sandbox Verification Proof</span>
+                <span id="proof-reduction-badge" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-emerald-light); background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-emerald);">
+                  99.8% Cost Reduction
+                </span>
+              </div>
+
+              <div class="proof-result-card">
+                <div class="speedup-hero-badge">
+                  <span id="proof-speedup-num" class="speedup-number">96.9x</span>
+                  <div>
+                    <div class="speedup-label">Measured Execution Speedup</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
+                      Deterministic EXPLAIN (ANALYZE, BUFFERS) verification
+                    </div>
+                  </div>
+                </div>
+
+                <!-- AST Plan Diff -->
+                <div class="plan-diff-container">
+                  <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">
+                    PostgreSQL Execution Plan Diff
+                  </div>
+                  <div id="proof-diff-del" class="diff-line diff-del">
+                    - Seq Scan on orders (cost=0.00..2418.50 rows=25 width=64)
+                  </div>
+                  <div id="proof-diff-add" class="diff-line diff-add">
+                    + Index Scan using idx_orders_cust_status on orders (cost=0.42..4.82 rows=25 width=64)
+                  </div>
+                </div>
+
+                <!-- Detailed Metrics Comparison -->
+                <div class="metrics-comparison-grid">
+                  <div class="metric-box">
+                    <span class="metric-box-title">Baseline Time</span>
+                    <span id="val-baseline-time" class="metric-box-val val-bad">18.42 ms</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="metric-box-title">Verified Time</span>
+                    <span id="val-optimized-time" class="metric-box-val val-good">0.19 ms</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="metric-box-title">Filtered Discard</span>
+                    <span id="val-rows-filtered" class="metric-box-val val-bad">49,975 rows (99.9%)</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="metric-box-title">Planner Cost</span>
+                    <span id="val-baseline-cost" class="metric-box-val val-bad">2,418.50</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="metric-box-title">Optimized Cost</span>
+                    <span id="val-optimized-cost" class="metric-box-val val-good">4.82</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="metric-box-title">Shared Buffer Hits</span>
+                    <span id="val-buffer-hits" class="metric-box-val" style="color: var(--accent-cyan);">1,240 → 4 blocks</span>
+                  </div>
+                </div>
+
+                <!-- Generated Migration DDL -->
+                <div style="margin-top: auto;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">
+                      Verified Non-Blocking DDL
+                    </span>
+                    <button class="btn-sm btn-outline-emerald" data-copy-target="proof-ddl-snippet" style="padding: 2px 10px;">
+                      Copy DDL
+                    </button>
+                  </div>
+                  <div id="proof-ddl-snippet" class="code-editor-box" style="margin-bottom: 0; color: var(--accent-emerald-light); font-size: 0.8rem; padding: 10px 14px;">
+CREATE INDEX CONCURRENTLY idx_orders_cust_status ON orders (customer_id, status, created_at DESC);
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         WHY SANDBOXING MATTERS (THE FATAL FLAW OF STATIC TOOLS)
+         ========================================================================== -->
+    <section class="philosophy-section">
+      <div class="container">
+        <div style="text-align: center; max-width: 760px; margin: 0 auto;">
+          <span class="section-tag tag-indigo">Deterministic Verification</span>
+          <h2 class="section-heading">Why Static Rules Fail on PostgreSQL</h2>
+          <p class="section-desc" style="margin: 0 auto;">
+            PostgreSQL query planner decisions depend heavily on table cardinality, correlation statistics, and memory buffers. Theoretical index recommendations fail in production without empirical measurement.
+          </p>
+        </div>
+
+        <div class="comparison-bento">
+          <!-- Danger Card -->
+          <div class="bento-card bento-danger">
+            <div class="bento-header">
+              <div class="bento-icon icon-danger">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="bento-title" style="color: #FCA5A5;">Traditional Blind DBA Tools</h3>
+                <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">STATIC GUESSWORK</span>
+              </div>
+            </div>
+
+            <ul class="bento-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-rose)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <span><strong>Guesses index impact without execution:</strong> Leaves engineers blind to whether PostgreSQL planner will even choose the index.</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-rose)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <span><strong>Bloats storage with unused indexes:</strong> Proposes redundant indexes that degrade write latency on INSERT/UPDATE workloads.</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-rose)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <span><strong>Requires production write access or dangerous locks:</strong> High risk of table lockouts during maintenance windows.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Success Card -->
+          <div class="bento-card bento-success">
+            <div class="bento-header">
+              <div class="bento-icon icon-success">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <polyline points="9 12 11 14 15 10"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="bento-title" style="color: var(--accent-emerald-light);">Argus-PG Empirical Sandboxing</h3>
+                <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-emerald);">MATHEMATICALLY PROVEN</span>
+              </div>
+            </div>
+
+            <ul class="bento-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>100% Empirically Measured in Sandboxes:</strong> Runs real <code style="color: var(--accent-emerald-light);">EXPLAIN (ANALYZE, BUFFERS)</code> to prove the planner chooses the index.</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>Discards Negligible Candidates Automatically:</strong> If an index doesn't meet the speedup threshold (e.g. 5x+), it is pruned silently.</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>Strict Read-Only Connection to Production:</strong> All experiments, schema clones, and synthetic data live exclusively in Docker.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         5-STAGE ENGINE ARCHITECTURE
+         ========================================================================== -->
+    <section id="how-it-works" class="architecture-section">
+      <div class="container">
+        <div style="text-align: center; max-width: 720px; margin: 0 auto;">
+          <span class="section-tag tag-cyan">System Architecture</span>
+          <h2 class="section-heading">5-Stage Autonomous Engine</h2>
+          <p class="section-desc" style="margin: 0 auto;">
+            From production workload observation to non-blocking migration scripts in seconds.
+          </p>
+        </div>
+
+        <div class="arch-flow-grid">
+          <div class="arch-node">
+            <span class="arch-node-num">01. OBSERVE</span>
+            <h3 class="arch-node-title">Telemetry Ingestion</h3>
+            <p class="arch-node-desc">
+              Connects to read-only replica, introspecting <code class="font-mono" style="color: var(--accent-cyan);">pg_stat_statements</code> and <code class="font-mono" style="color: var(--accent-cyan);">pg_class</code> table sizes.
+            </p>
+            <div class="arch-node-meta">READ-ONLY REPLICA</div>
+          </div>
+
+          <div class="arch-node">
+            <span class="arch-node-num">02. NORMALIZE</span>
+            <h3 class="arch-node-title">AST Fingerprinting</h3>
+            <p class="arch-node-desc">
+              Normalizes raw SQL queries into parameterized AST trees with <code class="font-mono" style="color: var(--accent-indigo-light);">sqlglot</code>, stripping sensitive literals.
+            </p>
+            <div class="arch-node-meta">PII REDACTION</div>
+          </div>
+
+          <div class="arch-node">
+            <span class="arch-node-num">03. HYPOTHESIZE</span>
+            <h3 class="arch-node-title">Dual Brain Model</h3>
+            <p class="arch-node-desc">
+              Generates compound and partial index candidates via heuristic rule engine or optional <code class="font-mono" style="color: var(--accent-purple);">Gemini 3.5-flash</code>.
+            </p>
+            <div class="arch-node-meta">HEURISTIC + AI</div>
+          </div>
+
+          <div class="arch-node">
+            <span class="arch-node-num">04. SANDBOX</span>
+            <h3 class="arch-node-title">Synthetic Hydration</h3>
+            <p class="arch-node-desc">
+              Spins up ephemeral Docker container, clones catalog DDL, and hydrates 50,000 synthetic rows matching schema types.
+            </p>
+            <div class="arch-node-meta">EPHEMERAL DOCKER</div>
+          </div>
+
+          <div class="arch-node">
+            <span class="arch-node-num">05. DECIDE</span>
+            <h3 class="arch-node-title">Verification Gate</h3>
+            <p class="arch-node-desc">
+              Compares execution cost & buffer hits. Emits non-blocking <code class="font-mono" style="color: var(--accent-emerald-light);">CREATE INDEX CONCURRENTLY</code>.
+            </p>
+            <div class="arch-node-meta">ZERO NOISE / VERIFIED</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         SAFETY & BOUNDARIES
+         ========================================================================== -->
+    <section id="safety" class="safety-section">
+      <div class="container">
+        <div style="text-align: center; max-width: 720px; margin: 0 auto;">
+          <span class="section-tag tag-emerald">Zero-Risk Guarantees</span>
+          <h2 class="section-heading">Enforced Safety Boundaries</h2>
+          <p class="section-desc" style="margin: 0 auto;">
+            Engineered from day one to operate safely in enterprise and mission-critical production environments.
+          </p>
+        </div>
+
+        <div class="safety-matrix">
+          <div class="safety-row">
+            <div class="safety-badge safety-badge-pass">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="safety-text">
+              <h4>Strict Read-Only Connection</h4>
+              <p>Argus connects to your database with read-only catalog introspection credentials. It never creates tables, temporary objects, or indexes on your live cluster.</p>
+            </div>
+          </div>
+
+          <div class="safety-row">
+            <div class="safety-badge safety-badge-shield">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="safety-text">
+              <h4>Ephemeral Docker Isolation</h4>
+              <p>All database mutations, DDL executions, and synthetic row hydrations occur inside dedicated ephemeral containers that are purged immediately after testing.</p>
+            </div>
+          </div>
+
+          <div class="safety-row">
+            <div class="safety-badge safety-badge-shield">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="safety-text">
+              <h4>Zero Data Privacy Exposure (PII Redaction)</h4>
+              <p>Argus only extracts schema definitions and query AST structures. Actual user data records are never sent to LLMs or stored on disk.</p>
+            </div>
+          </div>
+
+          <div class="safety-row">
+            <div class="safety-badge safety-badge-pass">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="safety-text">
+              <h4>Non-Blocking DDL Output</h4>
+              <p>Every validated index recommendation is generated with <code>CREATE INDEX CONCURRENTLY</code> and accompanied by rollback statements to avoid table locking.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         MISSION CONTROL WEB DASHBOARD SHOWCASE
+         ========================================================================== -->
+    <section id="dashboard" class="dashboard-showcase-section">
+      <div class="container">
+        <div style="text-align: center; max-width: 760px; margin: 0 auto;">
+          <span class="section-tag tag-indigo">Web GUI & API</span>
+          <h2 class="section-heading">Argus Mission Control Dashboard</h2>
+          <p class="section-desc" style="margin: 0 auto;">
+            Prefer a visual UI? Run <code class="font-mono" style="color: var(--accent-indigo-light);">argus dashboard</code> to launch the real-time web console with live query telemetry, 1-click sandbox testing, and direct database apply actions.
+          </p>
+        </div>
+
+        <div class="dashboard-mockup-frame">
+          <div class="mockup-top-bar">
+            <div class="terminal-dots">
+              <div class="terminal-dot dot-red"></div>
+              <div class="terminal-dot dot-yellow"></div>
+              <div class="terminal-dot dot-green"></div>
+            </div>
+            <div class="mockup-address">http://127.0.0.1:8000/ • Argus Mission Control</div>
+            <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-emerald-light);">LIVE CONNECTED</div>
+          </div>
+
+          <div class="mockup-content">
+            <div class="mockup-stats-row">
+              <div class="mockup-stat-box">
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Queries Analyzed</div>
+                <div class="mockup-stat-num" style="color: #FFFFFF;">14</div>
+              </div>
+              <div class="mockup-stat-box">
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Verified Pass</div>
+                <div class="mockup-stat-num" style="color: var(--accent-emerald-light);">8</div>
+              </div>
+              <div class="mockup-stat-box">
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Avg Speedup</div>
+                <div class="mockup-stat-num" style="color: var(--accent-cyan);">94.6x</div>
+              </div>
+              <div class="mockup-stat-box">
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Engine Model</div>
+                <div class="mockup-stat-num" style="color: var(--accent-indigo-light); font-size: 1.1rem; padding-top: 6px;">Gemini 3.5</div>
+              </div>
+            </div>
+
+            <table class="mockup-table">
+              <thead>
+                <tr>
+                  <th>Query Pattern</th>
+                  <th>Target Table</th>
+                  <th>Baseline Cost</th>
+                  <th>Verified Speedup</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="font-family: var(--font-mono); color: #E2E8F0;">SELECT * FROM users WHERE email = $1</td>
+                  <td style="font-family: var(--font-mono);">users (100k)</td>
+                  <td style="font-family: var(--font-mono); color: var(--accent-rose);">4.46</td>
+                  <td style="font-family: var(--font-mono); color: var(--accent-emerald-light); font-weight: 700;">82.3x</td>
+                  <td><span style="color: var(--accent-emerald-light); font-family: var(--font-mono); font-size: 0.75rem; background: rgba(16,185,129,0.1); padding: 2px 8px; border-radius: 4px;">PASS_VERIFIED</span></td>
+                </tr>
+                <tr>
+                  <td style="font-family: var(--font-mono); color: #E2E8F0;">SELECT * FROM orders WHERE cust = $1 AND status = $2</td>
+                  <td style="font-family: var(--font-mono);">orders (50k)</td>
+                  <td style="font-family: var(--font-mono); color: var(--accent-rose);">2418.50</td>
+                  <td style="font-family: var(--font-mono); color: var(--accent-emerald-light); font-weight: 700;">96.9x</td>
+                  <td><span style="color: var(--accent-emerald-light); font-family: var(--font-mono); font-size: 0.75rem; background: rgba(16,185,129,0.1); padding: 2px 8px; border-radius: 4px;">PASS_VERIFIED</span></td>
+                </tr>
+                <tr>
+                  <td style="font-family: var(--font-mono); color: #E2E8F0;">SELECT * FROM audit_logs WHERE meta->>'type' = $1</td>
+                  <td style="font-family: var(--font-mono);">audit_logs (250k)</td>
+                  <td style="font-family: var(--font-mono); color: var(--accent-rose);">8920.00</td>
+                  <td style="font-family: var(--font-mono); color: var(--accent-emerald-light); font-weight: 700;">191.6x</td>
+                  <td><span style="color: var(--accent-emerald-light); font-family: var(--font-mono); font-size: 0.75rem; background: rgba(16,185,129,0.1); padding: 2px 8px; border-radius: 4px;">PASS_VERIFIED</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         DEVELOPER QUICKSTART
+         ========================================================================== -->
+    <section id="quickstart" class="quickstart-section">
+      <div class="container">
+        <div style="text-align: center; max-width: 720px; margin: 0 auto;">
+          <span class="section-tag tag-cyan">Get Started in 3 Minutes</span>
+          <h2 class="section-heading">Run Argus-PG Locally</h2>
+          <p class="section-desc" style="margin: 0 auto;">
+            No cloud accounts or credit cards required. Run it directly as a developer CLI against your local Docker environment or staging replica.
+          </p>
+        </div>
+
+        <div class="quickstart-box">
+          <!-- Step 1: Install -->
+          <div>
+            <h3 style="font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; margin-bottom: 12px;">
+              1. Clone & Install
+            </h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 14px;">
+              Install via Poetry with Python 3.11+ and Docker running locally.
+            </p>
+            <div class="cli-code-block">
+              <button class="copy-btn-floating" data-copy-text="git clone https://github.com/SpaceCypher/argus-pg.git && cd argus-pg && poetry install">
+                Copy
+              </button>
+              <span style="color: var(--text-muted);"># Clone repository</span><br>
+              <span style="color: var(--accent-emerald);">$</span> git clone https://github.com/SpaceCypher/argus-pg.git<br>
+              <span style="color: var(--accent-emerald);">$</span> cd argus-pg<br>
+              <span style="color: var(--text-muted);"># Install dependencies</span><br>
+              <span style="color: var(--accent-emerald);">$</span> poetry install
+            </div>
+          </div>
+
+          <!-- Step 2: Audit & Check -->
+          <div>
+            <h3 style="font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; margin-bottom: 12px;">
+              2. Audit Database or Check Query
+            </h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 14px;">
+              Inspect your database or validate an ad-hoc SQL query with automated sandbox testing.
+            </p>
+            <div class="cli-code-block">
+              <button class="copy-btn-floating" data-copy-text="poetry run argus check query.sql --brain gemini">
+                Copy
+              </button>
+              <span style="color: var(--text-muted);"># Audit production / replica catalog</span><br>
+              <span style="color: var(--accent-emerald);">$</span> poetry run argus audit<br>
+              <span style="color: var(--text-muted);"># Test specific query with sandbox validation</span><br>
+              <span style="color: var(--accent-emerald);">$</span> poetry run argus check query.sql --brain gemini<br>
+              <span style="color: var(--text-muted);"># Launch Mission Control Web UI</span><br>
+              <span style="color: var(--accent-emerald);">$</span> poetry run argus dashboard
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==========================================================================
+       FOOTER
+       ========================================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <svg width="24" height="24" viewBox="0 0 64 64" fill="none">
+            <rect width="64" height="64" rx="14" fill="#070A10" stroke="#1E293B" stroke-width="2"/>
+            <circle cx="32" cy="32" r="16" stroke="#6366F1" stroke-width="2"/>
+            <circle cx="32" cy="32" r="6" fill="#10B981"/>
+          </svg>
+          <span style="font-family: var(--font-sans); font-weight: 700; font-size: 1rem; color: var(--text-primary);">
+            Argus-PG
+          </span>
+          <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-left: 8px;">
+            Deterministic PostgreSQL Index Optimizer
+          </span>
+        </div>
+
+        <ul class="footer-links">
+          <li><a href="https://github.com/SpaceCypher/argus-pg" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://github.com/SpaceCypher/argus-pg/blob/main/README.md" target="_blank" rel="noopener">Documentation</a></li>
+          <li><a href="https://github.com/SpaceCypher/argus-pg/blob/main/LICENSE" target="_blank" rel="noopener">Apache-2.0 License</a></li>
+        </ul>
+      </div>
+
+      <div style="border-top: 1px solid var(--border-subtle); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <span class="footer-copy">
+          © 2026 SpaceCypher. Built as infrastructure, not a demo.
+        </span>
+        <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-emerald-light);">
+          ● Production Safety: Invariant Verified
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>

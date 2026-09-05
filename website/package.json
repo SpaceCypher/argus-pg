@@ -1,0 +1,9 @@
+{
+  "name": "argus-pg-website",
+  "version": "0.1.0",
+  "description": "Argus-PG: Sandbox-First Autonomous PostgreSQL Index Advisor & Validator",
+  "scripts": {
+    "dev": "python3 -m http.server 3000 -d .",
+    "start": "python3 -m http.server 3000 -d ."
+  }
+}

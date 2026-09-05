@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  🌐 <strong>Landing Page & Demo</strong>: <a href="https://argus-tau.vercel.app/">https://argus-tau.vercel.app/</a>
+  🌐 <strong>Interactive Web Experience</strong>: <a href="https://website-tawny-omega-12.vercel.app/">https://website-tawny-omega-12.vercel.app/</a>
 </p>
 
 ---
